@@ -59,11 +59,11 @@ configfile_rdm() {
     if [[ $rdmConnect = "200" ]]; then
         log "RDM connection status: $rdmConnect"
         log "RDM Connection was successful!"
-        led_blue
+        led_red
     elif [[ $rdmConnect = "401" ]]; then
         log "RDM connection status: $rdmConnect -> Recheck in 4 minutes"
         log "Check your $CONFIGFILE values, credentials and rdm_user permissions!"
-        led_red
+        led_blue
         sleep $((240+$RANDOM%10))
     elif [[ $rdmConnect = "Internal" ]]; then
         log "RDM connection status: $rdmConnect -> Recheck in 4 minutes"
@@ -74,7 +74,7 @@ configfile_rdm() {
     elif [[ -z $rdmConnect ]]; then
         log "RDM connection status: $rdmConnect -> Recheck in 4 minutes"
         log "Check your ATV internet connection!"
-        led_red
+        led_blue
         counter=$((counter+1))
         if [[ $counter -gt 4 ]];then
             log "Critical restart threshold of $counter reached. Rebooting device..."
@@ -86,7 +86,7 @@ configfile_rdm() {
     else
         log "RDM connection status: $rdmConnect -> Recheck in 4 minutes"
         log "Something different went wrong..."
-        led_red
+        led_blue
         sleep $((240+$RANDOM%10))
     fi
 }
@@ -225,17 +225,17 @@ if [ "$(pm list packages $ATLASPKG)" = "package:$ATLASPKG" ]; then
 	        	if [[ $calcTimeDiff -gt 300 ]]; then
 		        	log "Last seen at RDM is greater than 5 minutes -> Atlas Service will be restarting..."
 		        	force_restart
-                		led_red
-                		counter=$((counter+1))
-                		log "Counter is now set at $counter. device will be rebooted if counter reaches 4 failed restarts."
+					led_blue
+					counter=$((counter+1))
+					log "Counter is now set at $counter. device will be rebooted if counter reaches 4 failed restarts."
 	        	elif [[ $calcTimeDiff -le 10 ]]; then
 		        	log "Our device is live!"
                 		counter=0
-                		led_blue
+                		led_red
 	        	else
 		        	log "Last seen time is a bit off. Will check again later."
                 	counter=0
-                	led_blue
+                	led_red
 	        	fi
 		fi
             log "Scheduling next check in 4 minutes..."
