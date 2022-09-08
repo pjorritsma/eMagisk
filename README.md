@@ -10,7 +10,7 @@ This fork is even more WIP than emi's. This fork focuses on using RDM as the dev
 
 If last seen time is < 10 seconds, the device is considered live and healthy. If the last seen time is greater than 10 seconds but less than 5 minutes, a warning is recorded but no action is taken.
 
-Once the the time diff between RDM and the device is >= 5 minutes, this daemon will force restart all atlas services while killing pokemon go (atlas is responsible to spawn it again). On X96 Mini and X96W Tvs, the status LED will turn RED to indicate a possible fault. The LED will turn BLUE once the daemon detects the device is live again on RDM.
+Once the the time diff between RDM and the device is >= 5 minutes, this daemon will force restart all atlas services while killing pokemon go (atlas is responsible to spawn it again). On X96 Mini and X96W Tvs, the status LED will turn BLUE to indicate a possible fault. The LED will turn RED once the daemon detects the device is live again on RDM.
 
 If the above procedures fails 4 times in a row (16 minutes total) then the device is considered unrecoverable and a full reboot is triggered.
 
