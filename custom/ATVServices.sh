@@ -58,7 +58,7 @@ configfile_rdm() {
     if [[ -s $CONFIGFILE ]]; then
         log -p i -t eMagiskATVService "$CONFIGFILE exists and has data. Data will be pulled."
         source $CONFIGFILE
-        export rdm_user rdm_password rdm_backendURL
+        export rdm_user rdm_password rdm_backendURL timezone
     else
         log -p i -t eMagiskATVService "Failed to pull the info. Make sure $($CONFIGFILE) exists and has the correct data."
     fi
@@ -183,6 +183,14 @@ if [ "$(settings get global stay_on_while_plugged_in)" != 3 ]; then
 	settings put global stay_on_while_plugged_in 3
 fi
 
+# Check if the timezone variable is set
+if [ -n "$timezone" ]; then
+    # Set the timezone using the variable
+    setprop persist.sys.timezone "$timezone"
+    echo "Timezone set to $timezone"
+else
+    echo "Timezone variable not set. Skipping timezone change."
+fi
 
 # Health Service by Emi and Bubble with a little root touch
 
