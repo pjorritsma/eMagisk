@@ -116,10 +116,10 @@ done
 
 # Disable playstore alltogether (no auto updates)
 
-if [ "$(pm list packages -e com.android.vending)" = "package:com.android.vending" ]; then
-	log -p i -t eMagiskATVService "Disabling Play Store"
-	pm disable-user com.android.vending
-fi
+# if [ "$(pm list packages -e com.android.vending)" = "package:com.android.vending" ]; then
+	# log -p i -t eMagiskATVService "Disabling Play Store"
+	# pm disable-user com.android.vending
+# fi
 
 # Enable Magiskhide if not enabled
 
