@@ -35,7 +35,7 @@ if [[ $http_status -eq 200 ]]; then
 	  pkill -f "$0"
     else
       log -p i -t eMagiskATVService  "[AUTOUPDATE] The downloaded script is identical to the existing script."
-	  rm -f updated_script.sh
+      rm -f updated_script.sh
     fi
   else
     log -p i -t eMagiskATVService  "[AUTOUPDATE] The downloaded script does not have the expected shebang."
