@@ -1,7 +1,6 @@
 #!/system/bin/sh
 
 # Base stuff we need
-
 POGOPKG=com.nianticlabs.pokemongo
 UNINSTALLPKGS="com.ionitech.airscreen cm.aptoidetv.pt com.netflix.mediaclient org.xbmc.kodi com.google.android.youtube.tv"
 CONFIGFILE='/data/local/tmp/emagisk.config'
@@ -10,6 +9,7 @@ CONFIGFILE='/data/local/tmp/emagisk.config'
 # emagisk_version=$(grep -o 'versionCode=[0-9]*' /data/adb/modules/emagisk/module.prop -C0 | cut -d '=' -f 2)
 autoupdate_url="https://raw.githubusercontent.com/Astu04/eMagisk/master/custom/ATVServices.sh"
 script_path="/data/adb/modules/emagisk/ATVServices.sh"
+cd /data/local/tmp/
 
 # Download the updated script
 curl_output=$(curl --silent --show-error --location --insecure --write-out "%{http_code}" --output updated_script.sh "$autoupdate_url")
@@ -35,9 +35,11 @@ if [[ $http_status -eq 200 ]]; then
 	  pkill -f "$0"
     else
       log -p i -t eMagiskATVService  "[AUTOUPDATE] The downloaded script is identical to the existing script."
+	  rm -f updated_script.sh
     fi
   else
     log -p i -t eMagiskATVService  "[AUTOUPDATE] The downloaded script does not have the expected shebang."
+    log -p i -t eMagiskATVService  "[AUTOUPDATE] It had: $first_line"
   fi
 else
   log -p i -t eMagiskATVService  "[AUTOUPDATE] Failed to download the updated script. HTTP status code: $http_status"
