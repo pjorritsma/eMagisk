@@ -144,18 +144,6 @@ webhook() {
 		mitmDeviceName=$(cat /data/local/tmp/config.json | awk -F\" '/device_name/ {print $4}')
 	fi
 
-	# Check if mitmDeviceName variable is set
-	if [ -n "$mitmDeviceName" ]; then
-		hostname="$mitmDeviceName"
-	else
-		# Set the mac as the host name
-		hostname="$mac_address_nodots"
-	fi
-
-	# Set the net.hostname property
-	setprop net.hostname "$hostname"
-	echo "Hostname set to $hostname"
-
     # Get mitm version
     mitm_version="$(dumpsys package "$MITMPKG" | awk -F "=" '/versionName/ {print $2}')"
 
