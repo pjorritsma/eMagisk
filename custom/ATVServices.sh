@@ -188,26 +188,27 @@ webhook() {
     # Create the payload JSON
     # local payload_json="{\"username\":\"$mitmDeviceName\",\"content\":\"$message"
     local payload_json="{\"content\":\"$message"
-    payload_json+="\n*Device name*: $mitmDeviceName"
-    payload_json+="\nLocal IP: ||$local_ip||"
-    payload_json+="\nWAN IP: ||$wan_ip||"
-    payload_json+="\nmac: $mac_address"
-    payload_json+="\nmitm: $MITMPKG"
-    payload_json+="\nmitm version: $mitm_version"
-    if [[ -n "$agent" ]]; then
-	payload_json+="\npogo version: $agent"
-    fi
-    payload_json+="\npogo version: $pogo_version"
-    # payload_json+="\n\nLast 20 Lines:\n$tail_log"
-    payload_json+="\"}"
+	payload_json+="\n*Device name*: $mitmDeviceName"
+	payload_json+="\nLocal IP: ||$local_ip||"
+	payload_json+="\nWAN IP: ||$wan_ip||"
+	payload_json+="\nmac: $mac_address"
+	payload_json+="\nmitm: $MITMPKG"
+	payload_json+="\nmitm version: $mitm_version"
+	if [[ -n "$agent" ]]; then
+		payload_json+="\npogo version: $agent"
+	fi
+	payload_json+="\npogo version: $pogo_version"
+	# payload_json+="\n\nLast 20 Lines:\n$tail_log"
+	payload_json+="\"}"
 
-    log -p i -t eMagiskATVService "Sending discord webhook"
+	log -p i -t eMagiskATVService "Sending discord webhook"
     # Upload the payload JSON and logcat logs to Discord
-    if [[ $MITMPKG == com.pokemod.atlas* ]]; then
-	curl -X POST -k -H "Content-Type: multipart/form-data" -F "payload_json=$payload_json" -F "logcat=@/data/local/tmp/atlas.log" -F "logcat=@$temp_dir/logcat_${MITMPKG}_${timestamp}_${mac_address_nodots}_selfSentLog.log" "$discord_webhook"
-    else
-	curl -X POST -k -H "Content-Type: multipart/form-data" -F "payload_json=$payload_json" -F "logcat=@$temp_dir/logcat_${MITMPKG}_${timestamp}_${mac_address_nodots}_selfSentLog.log" "$discord_webhook"
-    fi
+	if [[ $MITMPKG == com.pokemod.atlas* ]]; then
+		curl -X POST -k -H "Content-Type: multipart/form-data" -F "payload_json=$payload_json" -F "logcat=@/data/local/tmp/atlas.log" -F "logcat=@$temp_dir/logcat_${MITMPKG}_${timestamp}_${mac_address_nodots}_selfSentLog.log" "$discord_webhook"
+	else
+		curl -X POST -k -H "Content-Type: multipart/form-data" -F "payload_json=$payload_json" -F "logcat=@$temp_dir/logcat_${MITMPKG}_${timestamp}_${mac_address_nodots}_selfSentLog.log" "$discord_webhook"
+	fi
+	# curl -k -X POST -H "Content-Type: application/json" -F "payload_json=$payload_json" # -d "{\"content\": \"$message\"}" "$discord_webhook"
     # Clean up temporary files
     rm -rf "$temp_dir"
 }
@@ -351,7 +352,7 @@ if [ -n "$timezone" ]; then
 else
     log -p i -t eMagiskATVService "Timezone variable not set. Skipping timezone change."
 fi
-
+	
 # Health Service by Emi and Bubble with a little root touch
 if result=$(check_mitmpkg); then
     (
