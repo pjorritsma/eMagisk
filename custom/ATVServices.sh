@@ -131,18 +131,20 @@ webhook() {
     local local_ip="$(ip route get 1.1.1.1 | awk '{print $7}')"
     local wan_ip="$(curl -s -k https://ipinfo.io/ip)"
     local mac_address="$(ip link show eth0 | awk '/ether/ {print $2}')"
-	local mac_address_nodots="$(ip link show eth0 | awk '/ether/ {print $2}' | tr -d ':')"
+    local mac_address_nodots="$(ip link show eth0 | awk '/ether/ {print $2}' | tr -d ':')"
     local timestamp="$(date +%Y-%m-%d_%H-%M-%S)"
     local mitm_version="NOT INSTALLED"
     local pogo_version="NOT INSTALLED"
-	local agent=""
-
-	mitmDeviceName="NO NAME"
-	if [ -f /data/local/tmp/atlas_config.json ]; then
-		mitmDeviceName=$(cat /data/local/tmp/atlas_config.json | awk -F\" '{print $12}')
-	else
-		mitmDeviceName=$(cat /data/local/tmp/config.json | awk -F\" '/device_name/ {print $4}')
-	fi
+    local agent=""
+    local playStoreVersion=""
+    playStoreVersion=$(dumpsys package com.android.vending | grep versionName | head -n 1 | cut -d "=" -f 2 | cut -d " " -f 1)
+    
+    mitmDeviceName="NO NAME"
+    if [ -f /data/local/tmp/atlas_config.json ]; then
+	mitmDeviceName=$(cat /data/local/tmp/atlas_config.json | awk -F\" '{print $12}')
+    else
+	mitmDeviceName=$(cat /data/local/tmp/config.json | awk -F\" '/device_name/ {print $4}')
+    fi
 
     # Get mitm version
     mitm_version="$(dumpsys package "$MITMPKG" | awk -F "=" '/versionName/ {print $2}')"
@@ -169,6 +171,7 @@ webhook() {
 		payload_json+="\nmitm agent: $agent"
 	fi
 	payload_json+="\npogo version: $pogo_version"
+	payload_json+="\nPlay Store version: $playStoreVersion"
 	payload_json+="\"}"
 
 	log -p i -t eMagiskATVService "Sending discord webhook"
