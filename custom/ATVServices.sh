@@ -246,8 +246,9 @@ if [ "$(pm list packages $MITMPKG)" = "package:$MITMPKG" ]; then
         rdmDeviceID=1
         log -p i -t eMagiskATVService "Start counter at $counter"
         while :; do
-            sleep $((240+$RANDOM%10))
-            configfile_rdm        
+            configfile_rdm
+	    autoupdate()
+            sleep $((240+$RANDOM%10))        
 
             if [[ $counter -gt 3 ]];then
             log -p i -t eMagiskATVService "Critical restart threshold of $counter reached. Rebooting device..."
