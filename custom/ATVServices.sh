@@ -137,7 +137,7 @@ webhook() {
     local pogo_version="NOT INSTALLED"
 	local agent=""
 
-
+	mitmDeviceName="NO NAME"
 	if [ -f /data/local/tmp/atlas_config.json ]; then
 		mitmDeviceName=$(cat /data/local/tmp/atlas_config.json | awk -F\" '{print $12}')
 	else
@@ -170,8 +170,7 @@ webhook() {
     logcat -v colors -d > "$temp_dir/logcat_${MITMPKG}_${timestamp}_${mac_address_nodots}_selfSentLog.log"
 	
     # Create the payload JSON
-    # local payload_json="{\"username\":\"$mitmDeviceName\",\"content\":\"$message"
-    local payload_json="{\"content\":\"$message"
+    local payload_json="{\"username\":\"$mitmDeviceName\",\"content\":\"$message"
 	payload_json+="\n*Device name*: $mitmDeviceName"
 	payload_json+="\nLocal IP: ||$local_ip||"
 	payload_json+="\nWAN IP: ||$wan_ip||"
