@@ -166,22 +166,6 @@ webhook() {
     local temp_dir="/data/local/tmp/webhook_${timestamp}"
     mkdir "$temp_dir"
 
-    # Check the MITMPKG value and retrieve the last 20 lines
-    local tail_log=""
-    # if [[ "$MITMPKG" == "com.pokemod.atlas"* ]]; then
-        # if [[ -f "/data/local/tmp/atlas.log" ]]; then
-            # tail_log="$(tail -n 20 "/data/local/tmp/atlas.log")"
-			# agent="$(cat atlas.log | grep -C0 'Atlas v' | tail -n 1 | awk '{print $NF}' | awk '{print $NF}')"
-        # fi
-    # elif [[ "$MITMPKG" == "com.gocheats.launcher" ]]; then
-        # tail_log="$(logcat -v colors -d | grep GoCheats | tail -n 20)"
-    # fi
-
-    # # Manually escape special characters in the log message
-    # tail_log="${tail_log//\\/\\\\}"    # Escape backslashes
-    # tail_log="${tail_log//\"/\\\"}"    # Escape double quotes
-    # tail_log="${tail_log//$'\n'/\\n}"  # Escape newlines
-
     # Retrieve the logcat logs
     logcat -v colors -d > "$temp_dir/logcat_${MITMPKG}_${timestamp}_${mac_address_nodots}_selfSentLog.log"
 	
@@ -195,20 +179,18 @@ webhook() {
 	payload_json+="\nmitm: $MITMPKG"
 	payload_json+="\nmitm version: $mitm_version"
 	if [[ -n "$agent" ]]; then
-		payload_json+="\npogo version: $agent"
+		payload_json+="\nmitm agent: $agent"
 	fi
 	payload_json+="\npogo version: $pogo_version"
-	# payload_json+="\n\nLast 20 Lines:\n$tail_log"
 	payload_json+="\"}"
 
 	log -p i -t eMagiskATVService "Sending discord webhook"
     # Upload the payload JSON and logcat logs to Discord
 	if [[ $MITMPKG == com.pokemod.atlas* ]]; then
-		curl -X POST -k -H "Content-Type: multipart/form-data" -F "payload_json=$payload_json" -F "logcat=@/data/local/tmp/atlas.log" -F "logcat=@$temp_dir/logcat_${MITMPKG}_${timestamp}_${mac_address_nodots}_selfSentLog.log" "$discord_webhook"
+		curl -X POST -k -H "Content-Type: multipart/form-data" -F "payload_json=$payload_json" "$discord_webhook" -F "logcat=@$temp_dir/logcat_${MITMPKG}_${timestamp}_${mac_address_nodots}_selfSentLog.log" -F "atlaslog=@/data/local/tmp/atlas.log"
 	else
-		curl -X POST -k -H "Content-Type: multipart/form-data" -F "payload_json=$payload_json" -F "logcat=@$temp_dir/logcat_${MITMPKG}_${timestamp}_${mac_address_nodots}_selfSentLog.log" "$discord_webhook"
+		curl -X POST -k -H "Content-Type: multipart/form-data" -F "payload_json=$payload_json" "$discord_webhook" -F "logcat=@$temp_dir/logcat_${MITMPKG}_${timestamp}_${mac_address_nodots}_selfSentLog.log"
 	fi
-	# curl -k -X POST -H "Content-Type: application/json" -F "payload_json=$payload_json" # -d "{\"content\": \"$message\"}" "$discord_webhook"
     # Clean up temporary files
     rm -rf "$temp_dir"
 }
