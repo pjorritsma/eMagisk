@@ -5,45 +5,47 @@ POGOPKG=com.nianticlabs.pokemongo
 UNINSTALLPKGS="com.ionitech.airscreen cm.aptoidetv.pt com.netflix.mediaclient org.xbmc.kodi com.google.android.youtube.tv"
 CONFIGFILE='/data/local/tmp/emagisk.config'
 
-# Autoupdate this script
-# emagisk_version=$(grep -o 'versionCode=[0-9]*' /data/adb/modules/emagisk/module.prop -C0 | cut -d '=' -f 2)
-autoupdate_url="https://raw.githubusercontent.com/Astu04/eMagisk/master/custom/ATVServices.sh"
-script_path="/data/adb/modules/emagisk/ATVServices.sh"
-cd /data/local/tmp/
+autoupdate() {
+	# Autoupdate this script
+	# emagisk_version=$(grep -o 'versionCode=[0-9]*' /data/adb/modules/emagisk/module.prop -C0 | cut -d '=' -f 2)
+	autoupdate_url="https://raw.githubusercontent.com/Astu04/eMagisk/master/custom/ATVServices.sh"
+	script_path="/data/adb/modules/emagisk/ATVServices.sh"
+	cd /data/local/tmp/
 
-# Download the updated script
-curl_output=$(curl --silent --show-error --location --insecure --write-out "%{http_code}" --output updated_script.sh "$autoupdate_url")
-http_status=${curl_output:(-3)}
+	# Download the updated script
+	curl_output=$(curl --silent --show-error --location --insecure --write-out "%{http_code}" --output updated_script.sh "$autoupdate_url")
+	http_status=${curl_output:(-3)}
 
-# Check if the HTTP status is 200 (OK)
-if [[ $http_status -eq 200 ]]; then
-  # Check if the first line of the updated script is #!/system/bin/sh
-  first_line=$(head -n 1 updated_script.sh)
-  if [[ $first_line = '#!/system/bin/sh' ]]; then
-    # Compare the content of the downloaded script with the existing script
-    if ! cmp -s updated_script.sh "$script_path"; then
-	  # Replace the script with the updated version
-	  chmod +x updated_script.sh
-	  mv updated_script.sh "$script_path"
-	  
-	  log -p i -t eMagiskATVService "ATVServices.sh was auto updated"
+	# Check if the HTTP status is 200 (OK)
+	if [[ $http_status -eq 200 ]]; then
+	  # Check if the first line of the updated script is #!/system/bin/sh
+	  first_line=$(head -n 1 updated_script.sh)
+	  if [[ $first_line = '#!/system/bin/sh' ]]; then
+		# Compare the content of the downloaded script with the existing script
+		if ! cmp -s updated_script.sh "$script_path"; then
+		  # Replace the script with the updated version
+		  chmod +x updated_script.sh
+		  mv updated_script.sh "$script_path"
+		  
+		  log -p i -t eMagiskATVService "ATVServices.sh was auto updated"
 
-	  # Run the updated script as a daemon
-	  nohup "$script_path" >/dev/null 2>&1 &
+		  # Run the updated script as a daemon
+		  nohup "$script_path" >/dev/null 2>&1 &
 
-	  # Kill the parent process
-	  pkill -f "$0"
-    else
-      log -p i -t eMagiskATVService  "[AUTOUPDATE] The downloaded script is identical to the existing script."
-      rm -f updated_script.sh
-    fi
-  else
-    log -p i -t eMagiskATVService  "[AUTOUPDATE] The downloaded script does not have the expected shebang."
-    log -p i -t eMagiskATVService  "[AUTOUPDATE] It had: $first_line"
-  fi
-else
-  log -p i -t eMagiskATVService  "[AUTOUPDATE] Failed to download the updated script. HTTP status code: $http_status"
-fi
+		  # Kill the parent process
+		  pkill -f "$0"
+		else
+		  log -p i -t eMagiskATVService  "[AUTOUPDATE] The downloaded script is identical to the existing script."
+		  rm -f updated_script.sh
+		fi
+	  else
+		log -p i -t eMagiskATVService  "[AUTOUPDATE] The downloaded script does not have the expected shebang."
+		log -p i -t eMagiskATVService  "[AUTOUPDATE] It had: $first_line"
+	  fi
+	else
+	  log -p i -t eMagiskATVService  "[AUTOUPDATE] Failed to download the updated script. HTTP status code: $http_status"
+	fi
+}
 
 # Check if this is a beta or production device
 
@@ -101,7 +103,7 @@ configfile_rdm() {
     if [[ -s $CONFIGFILE ]]; then
         log -p i -t eMagiskATVService "$CONFIGFILE exists and has data. Data will be pulled."
         source $CONFIGFILE
-        export rdm_user rdm_password rdm_backendURL timezone
+        export rdm_user rdm_password rdm_backendURL timezone autoupdate
     else
         log -p i -t eMagiskATVService "Failed to pull the info. Make sure $($CONFIGFILE) exists and has the correct data."
     fi
