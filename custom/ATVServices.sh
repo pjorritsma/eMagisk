@@ -8,6 +8,10 @@ CONFIGFILE='/data/local/tmp/emagisk.config'
 
 # Check if this is a beta or production device
 
+get_mitm_pkg() { # This function is so hardcoded that I'm allergic to it 
+    ps aux | grep -E -C0 "atlas|gocheats" | grep -C0 -v grep | awk -F ' ' '/com.pokemod.atlas/{print $NF} /com.gocheats.launcher/{print $NF}' | grep -E -C0 "atlas|gocheats" | sed 's/^[0-9]*://' | sed 's/:mapping$//'
+}
+
 check_mitmpkg() {
 	if [ "$(pm list packages com.gocheats.launcher)" = "package:com.gocheats.launcher" ]; then
 		log -p i -t eMagiskATVService "Found GC!"
