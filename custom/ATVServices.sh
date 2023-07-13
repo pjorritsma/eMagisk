@@ -232,9 +232,9 @@ fi
 if [ -n "$timezone" ]; then
     # Set the timezone using the variable
     setprop persist.sys.timezone "$timezone"
-    echo "Timezone set to $timezone"
+    log -p i -t eMagiskATVService "Timezone set to $timezone"
 else
-    echo "Timezone variable not set. Skipping timezone change."
+    log -p i -t eMagiskATVService "Timezone variable not set. Skipping timezone change."
 fi
 
 # Health Service by Emi and Bubble with a little root touch
