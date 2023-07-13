@@ -386,7 +386,7 @@ function findir() {
 ## This is a replacement for the old 'alias grep="grep -n -C 2 $_COLOR_ALWAYS_ARG -E"'
 function grep {
     if [ -t 0 ] || [ -t 1 ]; then
-        command grep -n -C 2 $_COLOR_ALWAYS_ARG -E "$@"
+        command grep -n $_COLOR_ALWAYS_ARG -E "$@"
     # elif { [ "$(LC_ALL=C stat -c %F - <&3)" = fifo ]; } 3>&1 ||
            # [ "$(LC_ALL=C stat -c %F -)" = fifo ] ||
            # [ -t 2 ]; then
