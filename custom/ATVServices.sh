@@ -326,6 +326,12 @@ if [ "$(settings get global stay_on_while_plugged_in)" != 3 ]; then
 	settings put global stay_on_while_plugged_in 3
 fi
 
+# Disable play protect
+if [ "$(settings get global package_verifier_enable)" != 0 ]; then
+	log -p i -t eMagiskATVService "Disable play protect"
+	settings set global package_verifier_enable 0
+fi
+
 # Check if the timezone variable is set
 if [ -n "$timezone" ]; then
     # Set the timezone using the variable
