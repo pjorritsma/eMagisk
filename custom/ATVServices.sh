@@ -361,7 +361,7 @@ if result=$(check_mitmpkg); then
         rdmDeviceID=1
         log -p i -t eMagiskATVService "Start counter at $counter"
         configfile_rdm
-		webhook "Booting"	
+        webhook "Booting"	
         while :; do
             configfile_rdm	  
             sleep $((240+$RANDOM%10))
