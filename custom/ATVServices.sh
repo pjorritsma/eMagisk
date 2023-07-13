@@ -247,7 +247,9 @@ if [ "$(pm list packages $MITMPKG)" = "package:$MITMPKG" ]; then
         log -p i -t eMagiskATVService "Start counter at $counter"
         while :; do
             configfile_rdm
-	    autoupdate()
+	    if [ "$autoupdate" = "true" ]; then
+              autoupdate()
+	    fi			  
             sleep $((240+$RANDOM%10))        
 
             if [[ $counter -gt 3 ]];then
