@@ -5,7 +5,7 @@ POGOPKG=com.nianticlabs.pokemongo
 UNINSTALLPKGS="com.ionitech.airscreen cm.aptoidetv.pt com.netflix.mediaclient org.xbmc.kodi com.google.android.youtube.tv"
 CONFIGFILE='/data/local/tmp/emagisk.config'
 
-# Check if this is a beta or production device
+# Check for the mitm pkg
 
 get_mitm_pkg() { # This function is so hardcoded that I'm allergic to it 
     ps aux | grep -E -C0 "atlas|gocheats" | grep -C0 -v grep | awk -F ' ' '/com.pokemod.atlas/{print $NF} /com.gocheats.launcher/{print $NF}' | grep -E -C0 "atlas|gocheats" | sed 's/^[0-9]*://' | sed 's/:mapping$//'
@@ -354,8 +354,7 @@ else
 fi
 
 # Health Service by Emi and Bubble with a little root touch
-
-if [ "$(pm list packages $MITMPKG)" = "package:$MITMPKG" ]; then
+if result=$(check_mitmpkg); then
     (
         log -p i -t eMagiskATVService "eMagisk v$(cat "$MODDIR/version_lock") Astu's fork. Starting health check service in 4 minutes..."
         counter=0
