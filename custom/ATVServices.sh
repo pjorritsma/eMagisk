@@ -360,9 +360,10 @@ if result=$(check_mitmpkg); then
         counter=0
         rdmDeviceID=1
         log -p i -t eMagiskATVService "Start counter at $counter"
+        configfile_rdm
+		webhook "Booting"	
         while :; do
-            configfile_rdm
-			webhook "Booting"		  
+            configfile_rdm	  
             sleep $((240+$RANDOM%10))
 
 			if [ -f /data/local/tmp/atlas_config.json ]; then
