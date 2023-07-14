@@ -316,13 +316,26 @@ if [ "$(settings get global stay_on_while_plugged_in)" != 3 ]; then
 	settings put global stay_on_while_plugged_in 3
 fi
 
-# Disable play protect
+# Disable package verifier
+
 if [ "$(settings get global package_verifier_enable)" != 0 ]; then
+	log -p i -t eMagiskATVService "Disable package verifier"
+	settings put global package_verifier_enable 0
+fi
+if [ "$(settings get global verifier_verify_adb_installs)" != 0 ]; then
+	log -p i -t eMagiskATVService "Disable package verifier over adb"
+	settings put global verifier_verify_adb_installs 0
+fi
+
+# Disable play protect
+
+if [ "$(settings get global package_verifier_user_consent)" != -1 ]; then
 	log -p i -t eMagiskATVService "Disable play protect"
-	settings set global package_verifier_enable 0
+	settings put global package_verifier_user_consent -1
 fi
 
 # Check if the timezone variable is set
+
 if [ -n "$timezone" ]; then
     # Set the timezone using the variable
     setprop persist.sys.timezone "$timezone"
@@ -332,6 +345,7 @@ else
 fi
 	
 # Health Service by Emi and Bubble with a little root touch
+
 if result=$(check_mitmpkg); then
     (
         log -p i -t eMagiskATVService "eMagisk v$(cat "$MODDIR/version_lock") Astu's fork. Starting health check service in 4 minutes..."
