@@ -417,7 +417,6 @@ if result=$(check_mitmpkg); then
                 		led_red
 	        	else
 		        	log -p i -t eMagiskATVService "Last seen time is a bit off. Will check again later."
-					webhook "Last seen time is a bit off. Will check again later."
                 	counter=0
                 	led_red
 	        	fi
