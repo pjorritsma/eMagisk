@@ -1,3 +1,5 @@
+!!! THERE IS NO SUPPORT FOR THIS. IT WORKS FOR ME... MOSTLY. DON'T DM ME ABOUT THIS ASKING FOR SUPPORT !!! 
+
 # eMagisk
 
 Installs useful binaries: bash, curl, nano, strace, eventrec and tcpdump. Also optionally installs Atlas services that ensure uptime.
