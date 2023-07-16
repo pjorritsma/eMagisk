@@ -137,6 +137,7 @@ webhook() {
     local pogo_version="NOT INSTALLED"
     local agent=""
     local playStoreVersion=""
+    local temperature="$(cat /sys/class/thermal/thermal_zone0/temp | awk '{print substr($0, 1, length($0)-3)}')"
     playStoreVersion=$(dumpsys package com.android.vending | grep versionName | head -n 1 | cut -d "=" -f 2 | cut -d " " -f 1)
     
     mitmDeviceName="NO NAME"
@@ -165,6 +166,7 @@ webhook() {
 	payload_json+="\nLocal IP: ||$local_ip||"
 	payload_json+="\nWAN IP: ||$wan_ip||"
 	payload_json+="\nmac: $mac_address"
+	payload_json+="\nTemp: $temperature"
 	payload_json+="\nmitm: $MITMPKG"
 	payload_json+="\nmitm version: $mitm_version"
 	if [[ -n "$agent" ]]; then
