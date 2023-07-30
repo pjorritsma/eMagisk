@@ -353,13 +353,13 @@ fi
 
 function send_heartbeat() {
     if [ -z "$heartbeat_endpoint" ]; then
-        echo "heartbeat_endpoint is null. Doing nothing."
+        log -p i -t eMagiskATVService "heartbeat_endpoint is null. Doing nothing."
         return
     fi
 
     cacert_path="/data/local/tmp/cacert.pem"
     if [ ! -f "$cacert_path" ]; then
-        echo "Downloading cacert.pem..."
+        log -p i -t eMagiskATVService "Downloading cacert.pem..."
         curl -k -o "$cacert_path" https://curl.se/ca/cacert.pem
     fi
 
