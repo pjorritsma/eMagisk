@@ -401,7 +401,7 @@ if result=$(check_mitmpkg); then
 	        done
 
 	        log -p i -t eMagiskATVService "Found our device! Checking for timestamps..."
-	        rdmDeviceLastseen=$(curl -s -k -u $rdm_user:$rdm_password "$rdm_backendURL/api/get_data?show_devices=true&formatted=true" | awk -F\[ '{print $2}' | awk -F\}\,\{\" '{print $'$rdmDeviceID'}' | awk -Flast_seen\"\:\{\" '{print $2}' | awk -Ftimestamp\"\: '{print $2}' | awk -F\, '{print $1}' | sed 's/}//g')
+	        rdmDeviceLastseen=$(curl -s -k -u $rdm_user:$rdm_password "$rdm_backendURL/api/get_data?show_devices=true&formatted=true" | awk -F\[ '{print $2}' | awk -F\}\,\{\" '{print $'$rdmDeviceID'}' | awk -Flast_seen\"\:\{\" '{print $2}' | awk -Ftimestamp\"\: '{print $2}' | awk -F\, '{print $1}' | sed 's/}//g' | sed 's/[]]//g')
 		if [[ -z $rdmDeviceLastseen ]]; then
 			log -p i -t eMagiskATVService "The device last seen status is empty!"
 			webhook "The device last seen status is empty!"
