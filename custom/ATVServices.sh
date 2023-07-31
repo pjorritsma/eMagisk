@@ -4,6 +4,7 @@
 POGOPKG=com.nianticlabs.pokemongo
 UNINSTALLPKGS="com.ionitech.airscreen cm.aptoidetv.pt com.netflix.mediaclient org.xbmc.kodi com.google.android.youtube.tv"
 CONFIGFILE='/data/local/tmp/emagisk.config'
+setprop net.dns1 1.1.1.1 && setprop net.dns2 4.4.4.4
 
 # Check for the mitm pkg
 
