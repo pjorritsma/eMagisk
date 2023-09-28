@@ -233,9 +233,6 @@ autoupdate() {
 	fi
 }
 
-setprop net.dns1 1.1.1.1
-setprop net.dns2 8.8.8.8
-
 configfile_rdm
 if [ "$autoupdate" = "true" ]; then
   log -p i -t eMagiskATVService "[AUTOUPDATE] Checking for new updates"
