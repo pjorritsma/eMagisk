@@ -350,6 +350,24 @@ else
     log -p i -t eMagiskATVService "Timezone variable not set. Skipping timezone change."
 fi
 
+# Check if ADB is disabled (adb_enabled is set to 0)
+
+adb_status=$(settings get global adb_enabled)
+if [ "$adb_status" -eq 0 ]; then
+    echo "ADB is currently disabled. Enabling it..."
+    settings put global adb_enabled 1
+fi
+
+# Check and set permissions for adb_keys
+
+adb_keys_file="/data/misc/adb/adb_keys"
+current_permissions=$(stat -c %a "$adb_keys_file")
+
+if [ "$current_permissions" -ne 640 ]; then
+    echo "Changing permissions for $adb_keys_file to 640..."
+    chmod 640 "$adb_keys_file"
+fi
+
 # Add a heartbeat to monitor if eMagisk can't contact the server
 
 function send_heartbeat() {
