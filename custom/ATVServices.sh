@@ -51,7 +51,7 @@ force_restart() {
 		am force-stop $POGOPKG
 		am force-stop $MITMPKG
 		sleep 5
-		am startservice $MITMPKG/com.pokemod.atlas.services.MappingService
+		am start-foreground-service $MITMPKG/com.pokemod.atlas.services.MappingService
 	fi
 	log -p i -t eMagiskATVService "Services were restarted!"
 }
