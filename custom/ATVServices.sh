@@ -51,7 +51,12 @@ force_restart() {
 		am force-stop $POGOPKG
 		am force-stop $MITMPKG
 		sleep 5
-		am startservice $MITMPKG/com.pokemod.atlas.services.MappingService
+		android_version=$(getprop ro.build.version.release)
+		if [ "$(echo $android_version | cut -d. -f1)" -ge 8 ]; then
+		    am start-foreground-service $MITMPKG/com.pokemod.atlas.services.MappingService
+		else
+		    am startservice $MITMPKG/com.pokemod.atlas.services.MappingService
+		fi
 	fi
 	log -p i -t eMagiskATVService "Services were restarted!"
 }
@@ -140,6 +145,7 @@ webhook() {
     local playStoreVersion=""
     local temperature="$(cat /sys/class/thermal/thermal_zone0/temp | awk '{print substr($0, 1, length($0)-3)}')"
     playStoreVersion=$(dumpsys package com.android.vending | grep versionName | head -n 1 | cut -d "=" -f 2 | cut -d " " -f 1)
+    android_version=$(getprop ro.build.version.release)
     
     mitmDeviceName="NO NAME"
     if [ -f /data/local/tmp/atlas_config.json ]; then
@@ -175,6 +181,7 @@ webhook() {
 	fi
 	payload_json+="\npogo version: $pogo_version"
 	payload_json+="\nPlay Store version: $playStoreVersion"
+	payload_json+="\nAndroid version: $android_version"
 	payload_json+="\"}"
 
 	log -p i -t eMagiskATVService "Sending discord webhook"
