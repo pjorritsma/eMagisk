@@ -477,7 +477,7 @@ if result=$(check_mitmpkg); then
 			
 			rdmInfo=$(echo "$response" | sed '$s/...$//')
 			
-			devices=($(echo "$rdmInfo" | jq -r '.data.devices[].uuid' | grep "^$mitmDeviceName"))
+			devices=$(echo "$rdmInfo" | jq -r '.data.devices[].uuid' | grep "^$mitmDeviceName")
 			for device in "${devices[@]}"; do
 				rdmDeviceLastSeen=$(echo "$rdmInfo" | jq -r --arg device "$device" '.data.devices[] | select(.uuid == $mitmDeviceName) | .last_seen')
 				if [ -z "$rdmDeviceLastSeen" ]; then
