@@ -174,19 +174,19 @@ webhook() {
 	
 	# Create the payload JSON
 	local payload_json="{\"username\":\"$mitmDeviceName\",\"content\":\"$message"
-	payload_json+="\n*Device name*: $mitmDeviceName"
-	payload_json+="\nLocal IP: ||$local_ip||"
-	payload_json+="\nWAN IP: ||$wan_ip||"
-	payload_json+="\nmac: $mac_address"
-	payload_json+="\nTemp: $temperature"
-	payload_json+="\nmitm: $MITMPKG"
-	payload_json+="\nmitm version: $mitm_version"
+	payload_json+="\\n*Device name*: $mitmDeviceName"
+	payload_json+="\\nLocal IP: ||$local_ip||"
+	payload_json+="\\nWAN IP: ||$wan_ip||"
+	payload_json+="\\nmac: $mac_address"
+	payload_json+="\\nTemp: $temperature"
+	payload_json+="\\nmitm: $MITMPKG"
+	payload_json+="\\nmitm version: $mitm_version"
 	if [[ -n "$agent" ]]; then
-		payload_json+="\nmitm agent: $agent"
+		payload_json+="\\nmitm agent: $agent"
 	fi
-	payload_json+="\npogo version: $pogo_version"
-	payload_json+="\nPlay Store version: $playStoreVersion"
-	payload_json+="\nAndroid version: $android_version"
+	payload_json+="\\npogo version: $pogo_version"
+	payload_json+="\\nPlay Store version: $playStoreVersion"
+	payload_json+="\\nAndroid version: $android_version"
 	payload_json+="\"}"
 
 	log -p i -t eMagiskATVService "Sending discord webhook"
