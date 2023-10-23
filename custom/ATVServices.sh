@@ -370,11 +370,18 @@ fi
 # Check and set permissions for adb_keys
 
 adb_keys_file="/data/misc/adb/adb_keys"
-current_permissions=$(stat -c %a "$adb_keys_file")
 
-if [ "$current_permissions" -ne 640 ]; then
-	echo "Changing permissions for $adb_keys_file to 640..."
-	chmod 640 "$adb_keys_file"
+if [ -e "$adb_keys_file" ]; then
+    current_permissions=$(stat -c %a "$adb_keys_file")
+    
+    if [ "$current_permissions" -ne 640 ]; then
+        echo "Changing permissions for $adb_keys_file to 640..."
+        chmod 640 "$adb_keys_file"
+    else
+        echo "Permissions for $adb_keys_file are already set to 640."
+    fi
+else
+    echo "File $adb_keys_file does not exist."
 fi
 
 # Download cacert to use certs instead of curl -k 
