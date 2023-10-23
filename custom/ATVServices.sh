@@ -481,7 +481,7 @@ if result=$(check_mitmpkg); then
 			for device in "$devices"; do
 				rdmDeviceLastSeen=$(echo "$rdmInfo" | jq -r --arg device "$device" '.data.devices[] | select(.uuid == $mitmDeviceName) | .last_seen')
 				if [ -z "$rdmDeviceLastSeen" ]; then
-					log -p i -t eMagiskATVService "No matching device name ($device) found in the JSON data or the last seen is null. Check RDM's devices."
+					log -p i -t eMagiskATVService "No matching device name $device found in the JSON data or the last seen is null. Check RDM's devices."
 					continue # Stopping this iteration
 				fi
 
