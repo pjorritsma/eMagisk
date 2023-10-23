@@ -441,6 +441,26 @@ if result=$(check_mitmpkg); then
             log -p i -t eMagiskATVService "Started health check!"
 			response=$(curl -s -w "%{http_code}" --cacert "$cacert_path" -u "$rdm_user":"$rdm_password" "$rdm_backendURL/api/get_data?show_devices=true&formatted=false")
 			statusCode=$(echo "$response" | tail -c 4)
+
+			if [ "$statusCode" -ne 200 ]; then
+				case "$statusCode" in
+					401)
+						message="Unauthorized. Check your credentials."
+						;;
+					404)
+						message="Resource not found."
+						;;
+					500)
+						message="Internal Server Error. Check the server logs."
+						;;
+					*)
+						message="Something went wrong with the request. Status code: $statusCode."
+						;;
+				esac
+				log -p i -t eMagiskATVService "RDM statusCode error: $message"
+				continue
+			fi
+
 			rdmInfo=$(echo "$response" | sed '$s/...$//')
 			
 			devices=($(echo "$rdmInfo" | jq -r '.data.devices[].uuid' | grep "^$mitmDeviceName"))
