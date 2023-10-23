@@ -53,7 +53,7 @@ force_restart() {
 		sleep 5
 		android_version=$(getprop ro.build.version.release)
 		if [ "$(echo $android_version | cut -d. -f1)" -ge 8 ]; then
-			am start-foreground-service $MITMPKG/com.pokemod.atlas.services.MappingService
+			monkey -p $MITMPKG 1
 			sleep 3
 		fi
 		am startservice $MITMPKG/com.pokemod.atlas.services.MappingService
