@@ -439,7 +439,7 @@ if result=$(check_mitmpkg); then
 				log -p -i -t eMagiskATVService "Couldn't find the config file"
 			fi
 
-			if tail -n 1 atlas.log | grep -q "Could not send heartbeat"; then
+			if tail -n 1 /data/local/tmp/atlas.log | grep -q "Could not send heartbeat"; then
 				force_restart
 			fi
 
