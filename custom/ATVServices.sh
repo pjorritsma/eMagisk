@@ -419,7 +419,7 @@ function send_heartbeat() {
 
 if result=$(check_mitmpkg); then
 	(
-		log -p i -t eMagiskATVService "eMagisk v$(cat "$MODDIR/version_lock") Astu's fork. Starting health check service in 4 minutes..."
+		log -p i -t eMagiskATVService "eMagisk: Astu's fork. Starting health check service in 4 minutes..."
 		counter=0
 		rdmDeviceID=1
 		log -p i -t eMagiskATVService "Start counter at $counter"
