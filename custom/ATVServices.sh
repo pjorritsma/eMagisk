@@ -269,18 +269,21 @@ done
 	# pm disable-user com.android.vending
 # fi
 
-# Enable Magiskhide if not enabled
+# Check if the magiskhide binary exists
+if type magiskhide >/dev/null 2>&1; then
+    # Enable Magiskhide if not enabled
+    if ! magiskhide status; then
+        log -p i -t eMagiskATVService "Enabling MagiskHide"
+        magiskhide enable
+    fi
 
-if ! magiskhide status; then
-	log -p i -t eMagiskATVService "Enabling MagiskHide"
-	magiskhide enable
-fi
-
-# Add pokemon go to Magisk hide if it isn't
-
-if ! magiskhide ls | grep -m1 $POGOPKG; then
-	log -p i -t eMagiskATVService "Adding PoGo to MagiskHide"
-	magiskhide add $POGOPKG
+    # Add Pokemon Go to Magisk hide if it isn't
+    if ! magiskhide ls | grep -q -m1 "$POGOPKG"; then
+        log -p i -t eMagiskATVService "Adding PoGo to MagiskHide"
+        magiskhide add "$POGOPKG"
+    fi
+else
+    echo "magiskhide binary not found."
 fi
 
 # Give all mitm services root permissions
