@@ -9,7 +9,7 @@ setprop net.dns1 1.1.1.1 && setprop net.dns2 4.4.4.4
 # Check for the mitm pkg
 
 get_mitm_pkg() { # This function is so hardcoded that I'm allergic to it 
-    ps aux | grep -E -C0 "atlas|gocheats" | grep -C0 -v grep | awk -F ' ' '/com.pokemod.atlas/{print $NF} /com.gocheats.launcher/{print $NF}' | grep -E -C0 "atlas|gocheats" | sed 's/^[0-9]*://' | sed 's/:mapping$//'
+	ps aux | grep -E -C0 "atlas|gocheats" | grep -C0 -v grep | awk -F ' ' '/com.pokemod.atlas/{print $NF} /com.gocheats.launcher/{print $NF}' | grep -E -C0 "atlas|gocheats" | sed 's/^[0-9]*://' | sed 's/:mapping$//'
 }
 
 check_mitmpkg() {
@@ -53,7 +53,7 @@ force_restart() {
 		sleep 5
 		android_version=$(getprop ro.build.version.release)
 		if [ "$(echo $android_version | cut -d. -f1)" -ge 8 ]; then
-			monkey -p $MITMPKG 1
+			am start-foreground-service $MITMPKG/com.pokemod.atlas.services.MappingService
 			sleep 3
 		fi
 		am startservice $MITMPKG/com.pokemod.atlas.services.MappingService
@@ -68,107 +68,107 @@ check_mitmpkg
 # Recheck if $CONFIGFILE exists and has data. Repulls data and checks the RDM connection status.
 
 configfile_rdm() {
-    if [[ -s $CONFIGFILE ]]; then
-        log -p i -t eMagiskATVService "$CONFIGFILE exists and has data. Data will be pulled."
-        source $CONFIGFILE
-        export rdm_user rdm_password rdm_backendURL discord_webhook timezone autoupdate heartbeat_endpoint heartbeat_secret
-    else
-        log -p i -t eMagiskATVService "Failed to pull the info. Make sure $($CONFIGFILE) exists and has the correct data."
-    fi
+	if [[ -s $CONFIGFILE ]]; then
+		log -p i -t eMagiskATVService "$CONFIGFILE exists and has data. Data will be pulled."
+		source $CONFIGFILE
+		export rdm_user rdm_password rdm_backendURL discord_webhook timezone autoupdate heartbeat_endpoint heartbeat_secret
+	else
+		log -p i -t eMagiskATVService "Failed to pull the info. Make sure $($CONFIGFILE) exists and has the correct data."
+	fi
 
-    # RDM connection check
+	# RDM connection check
 
-    rdmConnect=$(curl -s -k -o /dev/null -w "%{http_code}" -u $rdm_user:$rdm_password "$rdm_backendURL/api/get_data?show_devices=true")
-    if [[ $rdmConnect = "200" ]]; then
-        log -p i -t eMagiskATVService "RDM connection status: $rdmConnect"
-        log -p i -t eMagiskATVService "RDM Connection was successful!"
-        led_red
-    elif [[ $rdmConnect = "401" ]]; then
-        log -p i -t eMagiskATVService "RDM connection status: $rdmConnect -> Recheck in 4 minutes"
-        log -p i -t eMagiskATVService "Check your $CONFIGFILE values, credentials and rdm_user permissions!"
-        led_blue
+	rdmConnect=$(curl -s -k -o /dev/null -w "%{http_code}" -u $rdm_user:$rdm_password "$rdm_backendURL/api/get_data?show_devices=true")
+	if [[ $rdmConnect = "200" ]]; then
+		log -p i -t eMagiskATVService "RDM connection status: $rdmConnect"
+		log -p i -t eMagiskATVService "RDM Connection was successful!"
+		led_red
+	elif [[ $rdmConnect = "401" ]]; then
+		log -p i -t eMagiskATVService "RDM connection status: $rdmConnect -> Recheck in 4 minutes"
+		log -p i -t eMagiskATVService "Check your $CONFIGFILE values, credentials and rdm_user permissions!"
+		led_blue
 		webhook "Check your $CONFIGFILE values, credentials and rdm_user permissions! RDM connection status: $rdmConnect"
-        sleep $((240+$RANDOM%10))
-    elif [[ $rdmConnect = "Internal" ]]; then
-        log -p i -t eMagiskATVService "RDM connection status: $rdmConnect -> Recheck in 4 minutes"
-        log -p i -t eMagiskATVService "The RDM Server couldn't response properly to eMagisk!"
-        led_red
+		sleep $((240+$RANDOM%10))
+	elif [[ $rdmConnect = "Internal" ]]; then
+		log -p i -t eMagiskATVService "RDM connection status: $rdmConnect -> Recheck in 4 minutes"
+		log -p i -t eMagiskATVService "The RDM Server couldn't response properly to eMagisk!"
+		led_red
 		webhook "The RDM Server couldn't response properly to eMagisk! RDM connection status: $rdmConnect"
-        sleep $((240+$RANDOM%10))
+		sleep $((240+$RANDOM%10))
 
-    elif [[ -z $rdmConnect ]]; then
-        log -p i -t eMagiskATVService "RDM connection status: $rdmConnect -> Recheck in 4 minutes"
-        log -p i -t eMagiskATVService "Check your ATV internet connection!"
-        led_blue
+	elif [[ -z $rdmConnect ]]; then
+		log -p i -t eMagiskATVService "RDM connection status: $rdmConnect -> Recheck in 4 minutes"
+		log -p i -t eMagiskATVService "Check your ATV internet connection!"
+		led_blue
 		webhook "Check your ATV internet connection! RDM connection status: $rdmConnect"
-        counter=$((counter+1))
-        if [[ $counter -gt 4 ]];then
-            log -p i -t eMagiskATVService "Critical restart threshold of $counter reached. Rebooting device..."
-            reboot
-            # We need to wait for the reboot to actually happen or the process might be interrupted
-            sleep 60 
-        fi
-        sleep $((240+$RANDOM%10))
-    else
-        log -p i -t eMagiskATVService "RDM connection status: $rdmConnect -> Recheck in 4 minutes"
-        log -p i -t eMagiskATVService "Something different went wrong..."
-        led_blue
+		counter=$((counter+1))
+		if [[ $counter -gt 4 ]];then
+			log -p i -t eMagiskATVService "Critical restart threshold of $counter reached. Rebooting device..."
+			reboot
+			# We need to wait for the reboot to actually happen or the process might be interrupted
+			sleep 60 
+		fi
+		sleep $((240+$RANDOM%10))
+	else
+		log -p i -t eMagiskATVService "RDM connection status: $rdmConnect -> Recheck in 4 minutes"
+		log -p i -t eMagiskATVService "Something different went wrong..."
+		led_blue
 		webhook "Something different went wrong..."
-        sleep $((240+$RANDOM%10))
-    fi
+		sleep $((240+$RANDOM%10))
+	fi
 }
 
 # Send a webhook to discord if it's configured
 
 webhook() {
-    # Check if discord_webhook variable is set
-    if [[ -z "$discord_webhook" ]]; then
-        log -p i -t eMagiskATVService "discord_webhook variable is not set. Cannot send webhook."
-        return
-    fi
+	# Check if discord_webhook variable is set
+	if [[ -z "$discord_webhook" ]]; then
+		log -p i -t eMagiskATVService "discord_webhook variable is not set. Cannot send webhook."
+		return
+	fi
 
-    # Check internet connectivity by pinging 8.8.8.8 and 1.1.1.1
-    if ! ping -c 1 -W 1 8.8.8.8 >/dev/null && ! ping -c 1 -W 1 1.1.1.1 >/dev/null; then
-        log -p i -t eMagiskATVService "No internet connectivity. Skipping webhook."
-        return
-    fi
+	# Check internet connectivity by pinging 8.8.8.8 and 1.1.1.1
+	if ! ping -c 1 -W 1 8.8.8.8 >/dev/null && ! ping -c 1 -W 1 1.1.1.1 >/dev/null; then
+		log -p i -t eMagiskATVService "No internet connectivity. Skipping webhook."
+		return
+	fi
 
-    local message="$1"
-    local local_ip="$(ip route get 1.1.1.1 | awk '{print $7}')"
-    local wan_ip="$(curl -s -k https://ipinfo.io/ip)"
-    local mac_address="$(ip link show eth0 | awk '/ether/ {print $2}')"
-    local mac_address_nodots="$(ip link show eth0 | awk '/ether/ {print $2}' | tr -d ':')"
-    local timestamp="$(date +%Y-%m-%d_%H-%M-%S)"
-    local mitm_version="NOT INSTALLED"
-    local pogo_version="NOT INSTALLED"
-    local agent=""
-    local playStoreVersion=""
-    local temperature="$(cat /sys/class/thermal/thermal_zone0/temp | awk '{print substr($0, 1, length($0)-3)}')"
-    playStoreVersion=$(dumpsys package com.android.vending | grep versionName | head -n 1 | cut -d "=" -f 2 | cut -d " " -f 1)
-    android_version=$(getprop ro.build.version.release)
-    
-    mitmDeviceName="NO NAME"
-    if [ -f /data/local/tmp/atlas_config.json ]; then
-	mitmDeviceName=$(cat /data/local/tmp/atlas_config.json | awk -F\" '{print $12}')
-    else
-	mitmDeviceName=$(cat /data/local/tmp/config.json | awk -F\" '/device_name/ {print $4}')
-    fi
-
-    # Get mitm version
-    mitm_version="$(dumpsys package "$MITMPKG" | awk -F "=" '/versionName/ {print $2}')"
-
-    # Get pogo version
-    pogo_version="$(dumpsys package com.nianticlabs.pokemongo | awk -F "=" '/versionName/ {print $2}')"
-
-    # Create a temporary directory to store the files
-    local temp_dir="/data/local/tmp/webhook_${timestamp}"
-    mkdir "$temp_dir"
-
-    # Retrieve the logcat logs
-    logcat -v colors -d > "$temp_dir/logcat_${MITMPKG}_${timestamp}_${mac_address_nodots}_selfSentLog.log"
+	local message="$1"
+	local local_ip="$(ip route get 1.1.1.1 | awk '{print $7}')"
+	local wan_ip="$(curl -s -k https://ipinfo.io/ip)"
+	local mac_address="$(ip link show eth0 | awk '/ether/ {print $2}')"
+	local mac_address_nodots="$(ip link show eth0 | awk '/ether/ {print $2}' | tr -d ':')"
+	local timestamp="$(date +%Y-%m-%d_%H-%M-%S)"
+	local mitm_version="NOT INSTALLED"
+	local pogo_version="NOT INSTALLED"
+	local agent=""
+	local playStoreVersion=""
+	local temperature="$(cat /sys/class/thermal/thermal_zone0/temp | awk '{print substr($0, 1, length($0)-3)}')"
+	playStoreVersion=$(dumpsys package com.android.vending | grep versionName | head -n 1 | cut -d "=" -f 2 | cut -d " " -f 1)
+	android_version=$(getprop ro.build.version.release)
 	
-    # Create the payload JSON
-    local payload_json="{\"username\":\"$mitmDeviceName\",\"content\":\"$message"
+	mitmDeviceName="NO NAME"
+	if [ -f /data/local/tmp/atlas_config.json ]; then
+	mitmDeviceName=$(cat /data/local/tmp/atlas_config.json | awk -F\" '{print $12}')
+	else
+	mitmDeviceName=$(cat /data/local/tmp/config.json | awk -F\" '/device_name/ {print $4}')
+	fi
+
+	# Get mitm version
+	mitm_version="$(dumpsys package "$MITMPKG" | awk -F "=" '/versionName/ {print $2}')"
+
+	# Get pogo version
+	pogo_version="$(dumpsys package com.nianticlabs.pokemongo | awk -F "=" '/versionName/ {print $2}')"
+
+	# Create a temporary directory to store the files
+	local temp_dir="/data/local/tmp/webhook_${timestamp}"
+	mkdir "$temp_dir"
+
+	# Retrieve the logcat logs
+	logcat -v colors -d > "$temp_dir/logcat_${MITMPKG}_${timestamp}_${mac_address_nodots}_selfSentLog.log"
+	
+	# Create the payload JSON
+	local payload_json="{\"username\":\"$mitmDeviceName\",\"content\":\"$message"
 	payload_json+="\n*Device name*: $mitmDeviceName"
 	payload_json+="\nLocal IP: ||$local_ip||"
 	payload_json+="\nWAN IP: ||$wan_ip||"
@@ -185,14 +185,14 @@ webhook() {
 	payload_json+="\"}"
 
 	log -p i -t eMagiskATVService "Sending discord webhook"
-    # Upload the payload JSON and logcat logs to Discord
+	# Upload the payload JSON and logcat logs to Discord
 	if [[ $MITMPKG == com.pokemod.atlas* ]]; then
 		curl -X POST -k -H "Content-Type: multipart/form-data" -F "payload_json=$payload_json" "$discord_webhook" -F "logcat=@$temp_dir/logcat_${MITMPKG}_${timestamp}_${mac_address_nodots}_selfSentLog.log" -F "atlaslog=@/data/local/tmp/atlas.log"
 	else
 		curl -X POST -k -H "Content-Type: multipart/form-data" -F "payload_json=$payload_json" "$discord_webhook" -F "logcat=@$temp_dir/logcat_${MITMPKG}_${timestamp}_${mac_address_nodots}_selfSentLog.log"
 	fi
-    # Clean up temporary files
-    rm -rf "$temp_dir"
+	# Clean up temporary files
+	rm -rf "$temp_dir"
 }
 
 autoupdate() {
@@ -281,17 +281,17 @@ fi
 # Give all mitm services root permissions
 
 for package in $MITMPKG com.android.shell; do
-    packageUID=$(dumpsys package "$package" | grep userId | head -n1 | cut -d= -f2)
-    policy=$(sqlite3 /data/adb/magisk.db "select policy from policies where package_name='$package'")
-    if [ "$policy" != 2 ]; then
-        log -p i -t eMagiskATVService "$package current policy is $policy. Adding root permissions..."
-        if ! sqlite3 /data/adb/magisk.db "DELETE from policies WHERE package_name='$package'" ||
-            ! sqlite3 /data/adb/magisk.db "INSERT INTO policies (uid,package_name,policy,until,logging,notification) VALUES($packageUID,'$package',2,0,1,1)"; then
-            log -p i -t eMagiskATVService "ERROR: Could not add $package (UID: $packageUID) to Magisk's DB."
-        fi
-    else
-        log -p i -t eMagiskATVService "Root permissions for $package are OK!"
-    fi
+	packageUID=$(dumpsys package "$package" | grep userId | head -n1 | cut -d= -f2)
+	policy=$(sqlite3 /data/adb/magisk.db "select policy from policies where package_name='$package'")
+	if [ "$policy" != 2 ]; then
+		log -p i -t eMagiskATVService "$package current policy is $policy. Adding root permissions..."
+		if ! sqlite3 /data/adb/magisk.db "DELETE from policies WHERE package_name='$package'" ||
+			! sqlite3 /data/adb/magisk.db "INSERT INTO policies (uid,package_name,policy,until,logging,notification) VALUES($packageUID,'$package',2,0,1,1)"; then
+			log -p i -t eMagiskATVService "ERROR: Could not add $package (UID: $packageUID) to Magisk's DB."
+		fi
+	else
+		log -p i -t eMagiskATVService "Root permissions for $package are OK!"
+	fi
 done
 
 # Set mitm mock location permission as ignore
@@ -347,19 +347,19 @@ fi
 # Check if the timezone variable is set
 
 if [ -n "$timezone" ]; then
-    # Set the timezone using the variable
-    setprop persist.sys.timezone "$timezone"
-    log -p i -t eMagiskATVService "Timezone set to $timezone"
+	# Set the timezone using the variable
+	setprop persist.sys.timezone "$timezone"
+	log -p i -t eMagiskATVService "Timezone set to $timezone"
 else
-    log -p i -t eMagiskATVService "Timezone variable not set. Skipping timezone change."
+	log -p i -t eMagiskATVService "Timezone variable not set. Skipping timezone change."
 fi
 
 # Check if ADB is disabled (adb_enabled is set to 0)
 
 adb_status=$(settings get global adb_enabled)
 if [ "$adb_status" -eq 0 ]; then
-    echo "ADB is currently disabled. Enabling it..."
-    settings put global adb_enabled 1
+	echo "ADB is currently disabled. Enabling it..."
+	settings put global adb_enabled 1
 fi
 
 # Check and set permissions for adb_keys
@@ -368,8 +368,8 @@ adb_keys_file="/data/misc/adb/adb_keys"
 current_permissions=$(stat -c %a "$adb_keys_file")
 
 if [ "$current_permissions" -ne 640 ]; then
-    echo "Changing permissions for $adb_keys_file to 640..."
-    chmod 640 "$adb_keys_file"
+	echo "Changing permissions for $adb_keys_file to 640..."
+	chmod 640 "$adb_keys_file"
 fi
 
 # Download cacert to use certs instead of curl -k 
@@ -383,39 +383,39 @@ fi
 # Add a heartbeat to monitor if eMagisk can't contact the server
 
 function send_heartbeat() {
-    if [ -z "$heartbeat_endpoint" ]; then
-        log -p i -t eMagiskATVService "heartbeat_endpoint is null. Doing nothing."
-        return
-    fi
+	if [ -z "$heartbeat_endpoint" ]; then
+		log -p i -t eMagiskATVService "heartbeat_endpoint is null. Doing nothing."
+		return
+	fi
 
-    mitmDeviceName="NO NAME"
-    if [ -f "/data/local/tmp/atlas_config.json" ]; then
-        mitmDeviceName=$(cat "/data/local/tmp/atlas_config.json" | awk -F\" '{print $12}')
-    else
-        mitmDeviceName=$(cat "/data/local/tmp/config.json" | awk -F\" '/device_name/ {print $4}')
-    fi
+	mitmDeviceName="NO NAME"
+	if [ -f "/data/local/tmp/atlas_config.json" ]; then
+		mitmDeviceName=$(cat "/data/local/tmp/atlas_config.json" | awk -F\" '{print $12}')
+	else
+		mitmDeviceName=$(cat "/data/local/tmp/config.json" | awk -F\" '/device_name/ {print $4}')
+	fi
 
-    # Assuming heartbeat_secret is previously defined.
-    json_data="{\"mitmDeviceName\":\"$mitmDeviceName\", \"secret\":\"$heartbeat_secret\"}"
+	# Assuming heartbeat_secret is previously defined.
+	json_data="{\"mitmDeviceName\":\"$mitmDeviceName\", \"secret\":\"$heartbeat_secret\"}"
 
-    # Sending the JSON data to the endpoint using curl with the cacert.pem.
-    curl --cacert "$cacert_path" -X POST -H "Content-Type: application/json" -d "$json_data" "$heartbeat_endpoint"
+	# Sending the JSON data to the endpoint using curl with the cacert.pem.
+	curl --cacert "$cacert_path" -X POST -H "Content-Type: application/json" -d "$json_data" "$heartbeat_endpoint"
 }
 
 # Health Service by Emi and Bubble with a little root touch
 
 if result=$(check_mitmpkg); then
-    (
-        log -p i -t eMagiskATVService "eMagisk v$(cat "$MODDIR/version_lock") Astu's fork. Starting health check service in 4 minutes..."
-        counter=0
-        rdmDeviceID=1
-        log -p i -t eMagiskATVService "Start counter at $counter"
-        configfile_rdm
-        webhook "Booting"
+	(
+		log -p i -t eMagiskATVService "eMagisk v$(cat "$MODDIR/version_lock") Astu's fork. Starting health check service in 4 minutes..."
+		counter=0
+		rdmDeviceID=1
+		log -p i -t eMagiskATVService "Start counter at $counter"
+		configfile_rdm
+		webhook "Booting"
 		send_heartbeat
-        while :; do
-            configfile_rdm	  
-            sleep $((240+$RANDOM%10))
+		while :; do
+			configfile_rdm	  
+			sleep $((240+$RANDOM%10))
 			send_heartbeat
 
 			if [ -f /data/local/tmp/atlas_config.json ]; then
@@ -430,18 +430,18 @@ if result=$(check_mitmpkg); then
 				force_restart
 			fi
 
-            if [[ $counter -gt 3 ]];then
-            log -p i -t eMagiskATVService "Critical restart threshold of $counter reached. Rebooting device..."
-			webhook "Critical restart threshold of $counter reached. Rebooting device..."
-            reboot
-            # We need to wait for the reboot to actually happen or the process might be interrupted
-            sleep 60 
-            fi
+			if [[ $counter -gt 3 ]];then
+				log -p i -t eMagiskATVService "Critical restart threshold of $counter reached. Rebooting device..."
+				webhook "Critical restart threshold of $counter reached. Rebooting device..."
+				reboot
+				# We need to wait for the reboot to actually happen or the process might be interrupted
+				sleep 60 
+			fi
 
-            log -p i -t eMagiskATVService "Started health check!"
+			log -p i -t eMagiskATVService "Started health check!"
 			response=$(curl -s -w "%{http_code}" --cacert "$cacert_path" -u "$rdm_user":"$rdm_password" "$rdm_backendURL/api/get_data?show_devices=true&formatted=false")
 			statusCode=$(echo "$response" | tail -c 4)
-
+			
 			if [ "$statusCode" -ne 200 ]; then
 				case "$statusCode" in
 					401)
@@ -457,10 +457,11 @@ if result=$(check_mitmpkg); then
 						message="Something went wrong with the request. Status code: $statusCode."
 						;;
 				esac
+
 				log -p i -t eMagiskATVService "RDM statusCode error: $message"
 				continue
 			fi
-
+			
 			rdmInfo=$(echo "$response" | sed '$s/...$//')
 			
 			devices=($(echo "$rdmInfo" | jq -r '.data.devices[].uuid' | grep "^$mitmDeviceName"))
@@ -482,7 +483,7 @@ if result=$(check_mitmpkg); then
 					counter=$((counter+1))
 					log -p i -t eMagiskATVService "Counter is now set at $counter. device will be rebooted if counter reaches 4 failed restarts."
 					webhook "Counter is now set at $counter. device will be rebooted if counter reaches 4 failed restarts."
-     					continue # No need to keep going through the loop, we can stop here
+					continue
 				elif [[ $calcTimeDiff -le 10 ]]; then
 					log -p i -t eMagiskATVService "Our device is live!"
 					counter=0
@@ -493,9 +494,9 @@ if result=$(check_mitmpkg); then
 					led_red
 				fi
 			done
-            log -p i -t eMagiskATVService "Scheduling next check in 4 minutes..."
-        done
-    ) &
+			log -p i -t eMagiskATVService "Scheduling next check in 4 minutes..."
+		done
+	) &
 else
-    log -p i -t eMagiskATVService "MITM isn't installed on this device! The daemon will stop."
+	log -p i -t eMagiskATVService "MITM isn't installed on this device! The daemon will stop."
 fi
