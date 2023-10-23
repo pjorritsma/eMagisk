@@ -53,10 +53,10 @@ force_restart() {
 		sleep 5
 		android_version=$(getprop ro.build.version.release)
 		if [ "$(echo $android_version | cut -d. -f1)" -ge 8 ]; then
-		    monkey -p $MITMPKG 1
-      		    sleep 3
+			am start-foreground-service $MITMPKG/com.pokemod.atlas.services.MappingService
+			sleep 3
 		fi
-	    	am startservice $MITMPKG/com.pokemod.atlas.services.MappingService
+		am startservice $MITMPKG/com.pokemod.atlas.services.MappingService
 	fi
 	log -p i -t eMagiskATVService "Services were restarted!"
 }
@@ -372,18 +372,20 @@ if [ "$current_permissions" -ne 640 ]; then
     chmod 640 "$adb_keys_file"
 fi
 
+# Download cacert to use certs instead of curl -k 
+
+cacert_path="/data/local/tmp/cacert.pem"
+if [ ! -f "$cacert_path" ]; then
+	log -p i -t eMagiskATVService "Downloading cacert.pem..."
+	curl -k -o "$cacert_path" https://curl.se/ca/cacert.pem
+fi
+
 # Add a heartbeat to monitor if eMagisk can't contact the server
 
 function send_heartbeat() {
     if [ -z "$heartbeat_endpoint" ]; then
         log -p i -t eMagiskATVService "heartbeat_endpoint is null. Doing nothing."
         return
-    fi
-
-    cacert_path="/data/local/tmp/cacert.pem"
-    if [ ! -f "$cacert_path" ]; then
-        log -p i -t eMagiskATVService "Downloading cacert.pem..."
-        curl -k -o "$cacert_path" https://curl.se/ca/cacert.pem
     fi
 
     mitmDeviceName="NO NAME"
@@ -410,19 +412,22 @@ if result=$(check_mitmpkg); then
         log -p i -t eMagiskATVService "Start counter at $counter"
         configfile_rdm
         webhook "Booting"
-	send_heartbeat
+		send_heartbeat
         while :; do
             configfile_rdm	  
             sleep $((240+$RANDOM%10))
-	    send_heartbeat
+			send_heartbeat
 
 			if [ -f /data/local/tmp/atlas_config.json ]; then
-				mitmDeviceName=$(cat /data/local/tmp/atlas_config.json | awk -F\" '{print $12}')
-				if tail -n 1 atlas.log | grep -q "Could not send heartbeat"; then
-					force_restart
-				fi
+				mitmDeviceName=$(jq -r '.deviceName'  /data/local/tmp/atlas_config.json)
+			elif [ -f /data/local/tmp/config.json ]; then
+				mitmDeviceName=$(jq -r '.device_name' /data/local/tmp/config.json)
 			else
-				mitmDeviceName=$(cat /data/local/tmp/config.json | awk -F\" '/device_name/ {print $4}')
+				log -p -i -t eMagiskATVService "Couldn't find the config file"
+			fi
+
+			if tail -n 1 atlas.log | grep -q "Could not send heartbeat"; then
+				force_restart
 			fi
 
             if [[ $counter -gt 3 ]];then
@@ -434,51 +439,39 @@ if result=$(check_mitmpkg); then
             fi
 
             log -p i -t eMagiskATVService "Started health check!"
-	        rdmDeviceInfo=$(curl -s -k -u $rdm_user:$rdm_password "$rdm_backendURL/api/get_data?show_devices=true&formatted=true"  | awk -F\[ '{print $2}' | awk -F\}\,\{\" '{print $'$rdmDeviceID'}')
-            rdmDeviceName=$(curl -s -k -u $rdm_user:$rdm_password "$rdm_backendURL/api/get_data?show_devices=true&formatted=true" | awk -F\[ '{print $2}' | awk -F\}\,\{\" '{print $'$rdmDeviceID'}' | awk -Fuuid\"\:\" '{print $2}' | awk -F\" '{print $1}')
-	
-	        until [[ $rdmDeviceName = $mitmDeviceName ]]
-	        do
-		        $((rdmDeviceID++))
-		        rdmDeviceInfo=$(curl -s -k -u $rdm_user:$rdm_password "$rdm_backendURL/api/get_data?show_devices=true&formatted=true" | awk -F\[ '{print $2}' | awk -F\}\,\{\" '{print $'$rdmDeviceID'}')
-		        rdmDeviceName=$(curl -s -k -u $rdm_user:$rdm_password "$rdm_backendURL/api/get_data?show_devices=true&formatted=true" | awk -F\[ '{print $2}' | awk -F\}\,\{\" '{print $'$rdmDeviceID'}' | awk -Fuuid\"\:\" '{print $2}' | awk -F\" '{print $1}')
-		
-		        if [[ -z $rdmDeviceInfo ]]; then
-                    log -p i -t eMagiskATVService "Probably reached end of device list or encountered a different issue!"
-                    log -p i -t eMagiskATVService "Set RDM Device ID to 1, recheck RDM connection and repull $CONFIGFILE"
-			        rdmDeviceID=1
-                    #repull rdm values + recheck rdm connection
-                    configfile_rdm
-			        rdmDeviceName=$(curl -s -k -u $rdm_user:$rdm_password "$rdm_backendURL/api/get_data?show_devices=true&formatted=true" | awk -F\[ '{print $2}' | awk -F\}\,\{\" '{print $'$rdmDeviceID'}' | awk -Fuuid\"\:\" '{print $2}' | awk -F\" '{print $1}')
-		        fi	
-	        done
+			response=$(curl -s -w "%{http_code}" --cacert "$cacert_path" -u "$rdm_user":"$rdm_password" "$rdm_backendURL/api/get_data?show_devices=true&formatted=false")
+			statusCode=$(echo "$response" | tail -c 4)
+			rdmInfo=$(echo "$response" | sed '$s/...$//')
+			
+			devices=($(echo "$rdmInfo" | jq -r '.data.devices[].uuid' | grep "^$mitmDeviceName"))
+			for device in "${devices[@]}"; do
+				rdmDeviceLastSeen=$(echo "$rdmInfo" | jq -r --arg mitmDeviceName "$mitmDeviceName" '.data.devices[] | select(.uuid == $mitmDeviceName) | .last_seen')
+				if [ -z "$rdmDeviceLastSeen" ]; then
+					log -p i -t eMagiskATVService "No matching mitmDeviceName found in the JSON data or the last seen is null. Check RDM's devices."
+					continue # Stopping this iteration
+				fi
 
-	        log -p i -t eMagiskATVService "Found our device! Checking for timestamps..."
-	        rdmDeviceLastseen=$(curl -s -k -u $rdm_user:$rdm_password "$rdm_backendURL/api/get_data?show_devices=true&formatted=true" | awk -F\[ '{print $2}' | awk -F\}\,\{\" '{print $'$rdmDeviceID'}' | awk -Flast_seen\"\:\{\" '{print $2}' | awk -Ftimestamp\"\: '{print $2}' | awk -F\, '{print $1}' | sed 's/}//g' | sed 's/[]]//g')
-		if [[ -z $rdmDeviceLastseen ]]; then
-			log -p i -t eMagiskATVService "The device last seen status is empty!"
-			webhook "The device last seen status is empty!"
-		else
-	        	now="$(date +'%s')"
-	        	calcTimeDiff=$(($now - $rdmDeviceLastseen))
-	
-	        	if [[ $calcTimeDiff -gt 300 ]]; then
-		        	log -p i -t eMagiskATVService "Last seen at RDM is greater than 5 minutes -> MITM Service will be restarting..."
-		        	force_restart
+				log -p i -t eMagiskATVService "Found our device! Checking for timestamps..."
+				now="$(date +'%s')"
+				calcTimeDiff=$(($now - $rdmDeviceLastSeen))
+
+				if [[ $calcTimeDiff -gt 300 ]]; then
+					log -p i -t eMagiskATVService "Last seen at RDM is greater than 5 minutes -> MITM Service will be restarting..."
+					force_restart
 					led_blue
 					counter=$((counter+1))
 					log -p i -t eMagiskATVService "Counter is now set at $counter. device will be rebooted if counter reaches 4 failed restarts."
 					webhook "Counter is now set at $counter. device will be rebooted if counter reaches 4 failed restarts."
-	        	elif [[ $calcTimeDiff -le 10 ]]; then
-		        	log -p i -t eMagiskATVService "Our device is live!"
-                		counter=0
-                		led_red
-	        	else
-		        	log -p i -t eMagiskATVService "Last seen time is a bit off. Will check again later."
-                	counter=0
-                	led_red
-	        	fi
-		fi
+				elif [[ $calcTimeDiff -le 10 ]]; then
+					log -p i -t eMagiskATVService "Our device is live!"
+					counter=0
+					led_red
+				else
+					log -p i -t eMagiskATVService "Last seen time is a bit off. Will check again later."
+					counter=0
+					led_red
+				fi
+			done
             log -p i -t eMagiskATVService "Scheduling next check in 4 minutes..."
         done
     ) &
