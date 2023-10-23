@@ -282,8 +282,6 @@ if type magiskhide >/dev/null 2>&1; then
         log -p i -t eMagiskATVService "Adding PoGo to MagiskHide"
         magiskhide add "$POGOPKG"
     fi
-else
-    echo "magiskhide binary not found."
 fi
 
 # Give all mitm services root permissions
@@ -305,7 +303,7 @@ if [ "$(magisk -V)" -le 23000 ]; then
         fi
     done
 else
-    echo "Magisk version is higher than 23000. Not checking for magisk's policies."
+    log -p i -t eMagiskATVService "Magisk version is higher than 23000. Not checking for magisk's policies."
 fi
 
 # Set mitm mock location permission as ignore
@@ -372,7 +370,7 @@ fi
 
 adb_status=$(settings get global adb_enabled)
 if [ "$adb_status" -eq 0 ]; then
-	echo "ADB is currently disabled. Enabling it..."
+	log -p i -t eMagiskATVService "ADB is currently disabled. Enabling it..."
 	settings put global adb_enabled 1
 fi
 
@@ -382,10 +380,8 @@ adb_keys_file="/data/misc/adb/adb_keys"
 if [ -e "$adb_keys_file" ]; then
     current_permissions=$(stat -c %a "$adb_keys_file")
     if [ "$current_permissions" -ne 640 ]; then
-        echo "Changing permissions for $adb_keys_file to 640..."
+        log -p i -t eMagiskATVService  "Changing permissions for $adb_keys_file to 640..."
         chmod 640 "$adb_keys_file"
-    else
-        echo "Permissions for $adb_keys_file are already set to 640."
     fi
 fi
 
