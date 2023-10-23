@@ -53,8 +53,9 @@ force_restart() {
 		sleep 5
 		android_version=$(getprop ro.build.version.release)
 		if [ "$(echo $android_version | cut -d. -f1)" -ge 8 ]; then
-			am start-foreground-service $MITMPKG/com.pokemod.atlas.services.MappingService
+			monkey -p $MITMPKG 1 # To solve "Error: app is in background uid null"
 			sleep 3
+   			input keyevent KEYCODE_HOME
 		fi
 		am startservice $MITMPKG/com.pokemod.atlas.services.MappingService
 	fi
