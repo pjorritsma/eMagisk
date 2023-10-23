@@ -31,11 +31,15 @@ check_mitmpkg() {
 # This is for the X96 Mini and X96W Atvs. Can be adapted to other ATVs that have a led status indicator
 
 led_red(){
-	echo 0 > /sys/class/leds/led-sys/brightness
+    if [ -e /sys/class/leds/led-sys ]; then
+        echo 0 > /sys/class/leds/led-sys/brightness
+    fi
 }
 
 led_blue(){
-	echo 1 > /sys/class/leds/led-sys/brightness
+    if [ -e /sys/class/leds/led-sys ]; then
+        echo 1 > /sys/class/leds/led-sys/brightness
+    fi
 }
 
 # Stops MITM and Pogo and restarts MITM MappingService
