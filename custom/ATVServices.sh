@@ -315,7 +315,7 @@ fi
 
 # Disable all location providers
 
-if ! settings get; then
+if ! settings get 2>/dev/null; then
 	log -p i -t eMagiskATVService "Checking allowed location providers as 'shell' user"
 	allowedProviders=".$(su shell -c settings get secure location_providers_allowed)"
 else
