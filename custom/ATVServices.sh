@@ -466,19 +466,20 @@ if result=$(check_mitmpkg); then
 			fi
 			
 			rdmInfo=$(echo "$response" | sed '$s/...$//')
-			
-			devices=$(echo "$rdmInfo" | jq -r '.data.devices[].uuid' | grep "^$mitmDeviceName")
- 			IFS=$'\n'
+			rdmTimestamp=$(echo "$rdmInfo" | jq -r '.data.timestamp')
+ 			IFS=$'\n' # Internal Field Separator, for jq purposes
+			devices=$(echo "$rdmInfo" | jq -r --arg mitmDeviceName "$mitmDeviceName" '.data.devices[] | select(.uuid | startswith($mitmDeviceName)) | "\(.uuid) \(.last_seen)"')
+
 			for device in "$devices"; do
-				rdmDeviceLastSeen=$(echo "$rdmInfo" | jq -r --arg device "$device" '.data.devices[] | select(.uuid == $mitmDeviceName) | .last_seen')
+				device_uuid=$(echo "$device" | awk '{print $1}')
+				rdmDeviceLastSeen=$(echo "$device" | awk '{print $2}')
 				if [ -z "$rdmDeviceLastSeen" ]; then
-					log -p i -t eMagiskATVService "No matching device name $device found in the JSON data or the last seen is null. Check RDM's devices."
+					log -p i -t eMagiskATVService "No matching device name $device_uuid found in the JSON data or the last seen is null. Check RDM's devices."
 					continue # Stopping this iteration
 				fi
 
 				log -p i -t eMagiskATVService "Found our device! Checking for timestamps..."
-				now="$(date +'%s')"
-				calcTimeDiff=$(($now - $rdmDeviceLastSeen))
+				calcTimeDiff=$(($rdmTimestamp - $rdmDeviceLastSeen))
 
 				if [[ $calcTimeDiff -gt 300 ]]; then
 					log -p i -t eMagiskATVService "Last seen at RDM is greater than 5 minutes -> MITM Service will be restarting..."
