@@ -253,15 +253,6 @@ else
   log -p i -t eMagiskATVService "[AUTOUPDATE] Disabled. Skipping"
 fi
 
-# Wipe out packages we don't need in our ATV
-
-echo "$UNINSTALLPKGS" | tr ' ' '\n' | while read -r item; do
-	if ! dumpsys package "$item" | \grep -qm1 "Unable to find package"; then
-		log -p i -t eMagiskATVService "Uninstalling $item..."
-		pm uninstall "$item"
-	fi
-done
-
 # Disable playstore alltogether (no auto updates)
 
 # if [ "$(pm list packages -e com.android.vending)" = "package:com.android.vending" ]; then
