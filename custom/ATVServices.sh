@@ -244,14 +244,6 @@ autoupdate() {
 	fi
 }
 
-configfile_rdm
-if [ "$autoupdate" = "true" ]; then
-  log -p i -t eMagiskATVService "[AUTOUPDATE] Checking for new updates"
-  autoupdate
-else
-  log -p i -t eMagiskATVService "[AUTOUPDATE] Disabled. Skipping"
-fi
-
 # Disable playstore alltogether (no auto updates)
 
 # if [ "$(pm list packages -e com.android.vending)" = "package:com.android.vending" ]; then
@@ -414,6 +406,13 @@ if result=$(check_mitmpkg); then
 		rdmDeviceID=1
 		log -p i -t eMagiskATVService "Start counter at $counter"
 		configfile_rdm
+		# Check for updates
+		if [ "$autoupdate" = "true" ]; then
+		  log -p i -t eMagiskATVService "[AUTOUPDATE] Checking for new updates"
+		  autoupdate
+		else
+		  log -p i -t eMagiskATVService "[AUTOUPDATE] Disabled. Skipping"
+		fi
 		webhook "Booting"
 		send_heartbeat
 		while :; do
