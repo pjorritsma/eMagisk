@@ -480,7 +480,7 @@ if result=$(check_mitmpkg); then
 					counter=$((counter+1))
 					log -p i -t eMagiskATVService "Counter is now set at $counter. device will be rebooted if counter reaches 4 failed restarts."
 					webhook "Counter is now set at $counter. device will be rebooted if counter reaches 4 failed restarts."
-					continue
+					continue 2
 				elif [[ $calcTimeDiff -le 10 ]]; then
 					log -p i -t eMagiskATVService "Our device is live!"
 					counter=0
