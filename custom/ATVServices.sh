@@ -471,7 +471,7 @@ if result=$(check_mitmpkg); then
 			for lastSeen in $lastSeens
 			do
 				log -p i -t eMagiskATVService "Found our device! Checking for timestamps..."
-				calcTimeDiff=$(( $timestamp - $lastSeen ))
+				calcTimeDiff=$(( $rdmTimestamp - $lastSeen ))
 
 				if [[ $calcTimeDiff -gt 300 ]]; then
 					log -p i -t eMagiskATVService "Last seen at RDM is greater than 5 minutes -> MITM Service will be restarting..."
