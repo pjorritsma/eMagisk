@@ -30,15 +30,19 @@ check_mitmpkg() {
 # This is for the X96 Mini and X96W Atvs. Can be adapted to other ATVs that have a led status indicator
 
 led_red(){
-    if [ -e /sys/class/leds/led-sys ]; then
-        echo 0 > /sys/class/leds/led-sys/brightness
-    fi
+	if [ -e /sys/class/leds/led-sys ]; then
+		echo 0 > /sys/class/leds/led-sys/brightness
+	elif [ -e /sys/class/leds/sys_led ]; then
+		echo 0 > /sys/class/leds/sys_led/brightness
+	fi
 }
 
 led_blue(){
-    if [ -e /sys/class/leds/led-sys ]; then
-        echo 1 > /sys/class/leds/led-sys/brightness
-    fi
+	if [ -e /sys/class/leds/led-sys ]; then
+		echo 1 > /sys/class/leds/led-sys/brightness
+	elif [ -e /sys/class/leds/sys_led ]; then
+		echo 1 > /sys/class/leds/sys_led/brightness
+	fi
 }
 
 # Stops MITM and Pogo and restarts MITM MappingService
@@ -253,17 +257,17 @@ autoupdate() {
 
 # Check if the magiskhide binary exists
 if type magiskhide >/dev/null 2>&1; then
-    # Enable Magiskhide if not enabled
-    if ! magiskhide status; then
-        log -p i -t eMagiskATVService "Enabling MagiskHide"
-        magiskhide enable
-    fi
+	# Enable Magiskhide if not enabled
+	if ! magiskhide status; then
+		log -p i -t eMagiskATVService "Enabling MagiskHide"
+		magiskhide enable
+	fi
 
-    # Add Pokemon Go to Magisk hide if it isn't
-    if ! magiskhide ls | grep -q -m1 "$POGOPKG"; then
-        log -p i -t eMagiskATVService "Adding PoGo to MagiskHide"
-        magiskhide add "$POGOPKG"
-    fi
+	# Add Pokemon Go to Magisk hide if it isn't
+	if ! magiskhide ls | grep -q -m1 "$POGOPKG"; then
+		log -p i -t eMagiskATVService "Adding PoGo to MagiskHide"
+		magiskhide add "$POGOPKG"
+	fi
 fi
 
 # Give all mitm services root permissions
@@ -271,21 +275,21 @@ fi
 # Check if magisk version is 23000 or less
 
 if [ "$(magisk -V)" -le 23000 ]; then
-    for package in "$MITMPKG" com.android.shell; do
-        packageUID=$(dumpsys package "$package" | grep userId | head -n1 | cut -d= -f2)
-        policy=$(sqlite3 /data/adb/magisk.db "select policy from policies where package_name='$package'")
-        if [ "$policy" != 2 ]; then
-            log -p i -t eMagiskATVService "$package current policy is $policy. Adding root permissions..."
-            if ! sqlite3 /data/adb/magisk.db "DELETE from policies WHERE package_name='$package'" ||
-                ! sqlite3 /data/adb/magisk.db "INSERT INTO policies (uid,package_name,policy,until,logging,notification) VALUES($packageUID,'$package',2,0,1,1)"; then
-                log -p i -t eMagiskATVService "ERROR: Could not add $package (UID: $packageUID) to Magisk's DB."
-            fi
-        else
-            log -p i -t eMagiskATVService "Root permissions for $package are OK!"
-        fi
-    done
+	for package in "$MITMPKG" com.android.shell; do
+		packageUID=$(dumpsys package "$package" | grep userId | head -n1 | cut -d= -f2)
+		policy=$(sqlite3 /data/adb/magisk.db "select policy from policies where package_name='$package'")
+		if [ "$policy" != 2 ]; then
+			log -p i -t eMagiskATVService "$package current policy is $policy. Adding root permissions..."
+			if ! sqlite3 /data/adb/magisk.db "DELETE from policies WHERE package_name='$package'" ||
+				! sqlite3 /data/adb/magisk.db "INSERT INTO policies (uid,package_name,policy,until,logging,notification) VALUES($packageUID,'$package',2,0,1,1)"; then
+				log -p i -t eMagiskATVService "ERROR: Could not add $package (UID: $packageUID) to Magisk's DB."
+			fi
+		else
+			log -p i -t eMagiskATVService "Root permissions for $package are OK!"
+		fi
+	done
 else
-    log -p i -t eMagiskATVService "Magisk version is higher than 23000. Not checking for magisk's policies."
+	log -p i -t eMagiskATVService "Magisk version is higher than 23000. Not checking for magisk's policies."
 fi
 
 # Set mitm mock location permission as ignore
@@ -360,11 +364,11 @@ fi
 
 adb_keys_file="/data/misc/adb/adb_keys"
 if [ -e "$adb_keys_file" ]; then
-    current_permissions=$(stat -c %a "$adb_keys_file")
-    if [ "$current_permissions" -ne 640 ]; then
-        log -p i -t eMagiskATVService  "Changing permissions for $adb_keys_file to 640..."
-        chmod 640 "$adb_keys_file"
-    fi
+	current_permissions=$(stat -c %a "$adb_keys_file")
+	if [ "$current_permissions" -ne 640 ]; then
+		log -p i -t eMagiskATVService  "Changing permissions for $adb_keys_file to 640..."
+		chmod 640 "$adb_keys_file"
+	fi
 fi
 
 # Download cacert to use certs instead of curl -k 
