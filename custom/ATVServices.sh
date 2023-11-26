@@ -421,7 +421,7 @@ if result=$(check_mitmpkg); then
 		send_heartbeat
 		while :; do
 			configfile_rdm	  
-			sleep $((240+$RANDOM%10))
+			sleep $((600+$RANDOM%10))
 			send_heartbeat
 
 			if [ -f /data/local/tmp/atlas_config.json ]; then
