@@ -360,6 +360,14 @@ if [ "$adb_status" -eq 0 ]; then
 	settings put global adb_enabled 1
 fi
 
+# Check if ADB over Wi-Fi is disabled (adb_wifi_enabled is set to 0)
+
+adb_wifi_status=$(settings get global adb_wifi_enabled)
+if [ "$adb_wifi_status" -eq 0 ]; then
+    log -p i -t eMagiskATVService "ADB over Wi-Fi is currently disabled. Enabling it..."
+    settings put global adb_wifi_enabled 1
+fi
+
 # Check and set permissions for adb_keys
 
 adb_keys_file="/data/misc/adb/adb_keys"
