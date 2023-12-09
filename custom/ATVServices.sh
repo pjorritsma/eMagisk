@@ -427,8 +427,7 @@ if result=$(check_mitmpkg); then
 		fi
 		webhook "Booting"
 		send_heartbeat
-		while :; do
-			configfile_rdm	  
+		while :; do  
 			sleep $((600+$RANDOM%10))
 			send_heartbeat
 
