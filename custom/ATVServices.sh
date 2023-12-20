@@ -156,7 +156,7 @@ configfile_rdm() {
 	if [[ -s $CONFIGFILE ]]; then
 		log -p i -t eMagiskATVService "$CONFIGFILE exists and has data. Data will be pulled."
 		source $CONFIGFILE
-		export rdm_user rdm_password rdm_backendURL discord_webhook timezone autoupdate heartbeat_endpoint heartbeat_secret
+		export rdm_user rdm_password rdm_backendURL discord_webhook timezone autoupdate
 	else
 		log -p i -t eMagiskATVService "Failed to pull the info. Make sure $($CONFIGFILE) exists and has the correct data."
 	fi
@@ -387,27 +387,6 @@ if [ ! -f "$cacert_path" ]; then
 	curl -k -o "$cacert_path" https://curl.se/ca/cacert.pem
 fi
 
-# Add a heartbeat to monitor if eMagisk can't contact the server
-
-function send_heartbeat() {
-	if [ -z "$heartbeat_endpoint" ]; then
-		log -p i -t eMagiskATVService "heartbeat_endpoint is null. Doing nothing."
-		return
-	fi
-
-	mitmDeviceName="NO NAME"
-	if [ -f "/data/local/tmp/atlas_config.json" ]; then
-		mitmDeviceName=$(cat "/data/local/tmp/atlas_config.json" | awk -F\" '{print $12}')
-	else
-		mitmDeviceName=$(cat "/data/local/tmp/config.json" | awk -F\" '/device_name/ {print $4}')
-	fi
-
-	# Assuming heartbeat_secret is previously defined.
-	json_data="{\"mitmDeviceName\":\"$mitmDeviceName\", \"secret\":\"$heartbeat_secret\"}"
-
-	# Sending the JSON data to the endpoint using curl with the cacert.pem.
-	curl --cacert "$cacert_path" -X POST -H "Content-Type: application/json" -d "$json_data" "$heartbeat_endpoint"
-}
 
 # Health Service by Emi and Bubble with a little root touch
 
@@ -426,10 +405,8 @@ if result=$(check_mitmpkg); then
 		  log -p i -t eMagiskATVService "[AUTOUPDATE] Disabled. Skipping"
 		fi
 		webhook "Booting"
-		send_heartbeat
 		while :; do  
 			sleep $((600+$RANDOM%10))
-			send_heartbeat
 
 			if [ -f /data/local/tmp/atlas_config.json ]; then
 				mitmDeviceName=$(jq -r '.deviceName'  /data/local/tmp/atlas_config.json)
