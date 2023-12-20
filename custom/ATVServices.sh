@@ -218,7 +218,9 @@ autoupdate() {
 	if [[ $http_status -eq 200 ]]; then
 	  # Check if the first line of the updated script is #!/system/bin/sh
 	  first_line=$(head -n 1 updated_script.sh)
-	  if [[ $first_line = '#!/system/bin/sh' ]]; then
+	  last_line=$(tail -n 2 updated_script.sh|grep "ENDOFFILE")
+
+	  if [[ $first_line = '#!/system/bin/sh' ]] && [[ $last_line = '#ENDOFFILE' ]]; then
 		# Compare the content of the downloaded script with the existing script
 		if ! cmp -s updated_script.sh "$script_path"; then
 		  # Replace the script with the updated version
