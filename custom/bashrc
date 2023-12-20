@@ -670,5 +670,5 @@ webhook() {
 }
 
 temperature() {
-    cat /sys/class/thermal/thermal_zone0/temp | awk '{print substr($0, 1, length($0)-3)}'
+    cat /sys/class/thermal/thermal_zone0/temp | busybox awk '{print substr($0, 1, length($0)-3)}'
 }
