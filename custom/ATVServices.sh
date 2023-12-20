@@ -485,3 +485,5 @@ if result=$(check_mitmpkg); then
 else
 	log -p i -t eMagiskATVService "MITM isn't installed on this device! The daemon will stop."
 fi
+
+#ENDOFFILE
