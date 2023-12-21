@@ -474,7 +474,8 @@ if result=$(check_mitmpkg); then
 				timestamp_epoch=$(stat -c "%Y" "$log_path")
 				current_time=$(date +%s)
 
-				if (( current_time - timestamp_epoch < 120 )); then
+				calcTimeDiff=$(( $current_time - $timestamp_epoch ))
+				if [[ $calcTimeDiff -le 120 ]]; then
 					log -p i -t eMagiskATVService "The log was modified within the last 120 seconds. No action required."
 				else
 					log -p i -t eMagiskATVService "The log wasn't modified within the last 120 seconds. Forcing restart of MITM. ts: $timestamp_epoch, time now: $current_time"
