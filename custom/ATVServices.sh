@@ -15,6 +15,12 @@ check_mitmpkg() {
 	if [ "$(pm list packages com.gocheats.launcher)" = "package:com.gocheats.launcher" ]; then
 		log -p i -t eMagiskATVService "Found GC!"
 		MITMPKG=com.gocheats.launcher
+	elif [ "$(pm list packages com.pokemod.aegis.beta)" = "package:com.pokemod.aegis.beta" ]; then
+		log -p i -t eMagiskATVService "Found Aegis developer version!"
+		MITMPKG=com.pokemod.aegis.beta
+	elif [ "$(pm list packages com.pokemod.aegis)" = "package:com.pokemod.aegis" ]; then
+		log -p i -t eMagiskATVService "Found Aegis production version!"
+		MITMPKG=com.pokemod.aegis
 	elif [ "$(pm list packages com.pokemod.atlas.beta)" = "package:com.pokemod.atlas.beta" ]; then
 		log -p i -t eMagiskATVService "Found Atlas developer version!"
 		MITMPKG=com.pokemod.atlas.beta
@@ -56,8 +62,12 @@ force_restart() {
 		am force-stop $MITMPKG
 		sleep 5
 		am start -n $MITMPKG/.MainActivity
-	else
-		am stopservice $MITMPKG/com.pokemod.atlas.services.MappingService
+	elif [[ $MITMPKG == com.pokemod* ]]; then
+		if [[ $MITMPKG == com.pokemod.atlas* ]]; then
+			am stopservice $MITMPKG/com.pokemod.atlas.services.MappingService
+		elif [[ $MITMPKG == com.pokemod.aegis* ]]; then
+			am stopservice $MITMPKG/com.pokemod.aegis.services.MappingService
+		fi
 		am force-stop $MITMPKG
 		sleep 5
 		android_version=$(getprop ro.build.version.release)
@@ -66,7 +76,11 @@ force_restart() {
 			sleep 3
    			input keyevent KEYCODE_HOME
 		fi
-		am startservice $MITMPKG/com.pokemod.atlas.services.MappingService
+		if [[ $MITMPKG == com.pokemod.atlas* ]]; then
+			am startservice $MITMPKG/com.pokemod.atlas.services.MappingService
+		elif [[ $MITMPKG == com.pokemod.aegis* ]]; then
+			am startservice $MITMPKG/com.pokemod.aegis.services.MappingService
+		fi
 	fi
 	log -p i -t eMagiskATVService "Services were restarted!"
 }
@@ -160,7 +174,7 @@ configfile_rdm() {
 		source $CONFIGFILE
 		export rdm_user rdm_password rdm_backendURL discord_webhook timezone autoupdate
 	else
-		log -p i -t eMagiskATVService "Failed to pull the info. Make sure $($CONFIGFILE) exists and has the correct data."
+		log -p i -t eMagiskATVService "Failed to pull the config file. Make sure $($CONFIGFILE) exists and has the correct data."
 	fi
 }
 
@@ -448,6 +462,8 @@ if result=$(check_mitmpkg); then
 				log -p i -t eMagiskATVService "Started log file health check!"
 				if [[ $MITMPKG == com.pokemod.atlas* ]]; then
 					log_path="/data/local/tmp/atlas.log"
+				elif [[ $MITMPKG == com.pokemod.aegis* ]]; then
+					log_path="/data/local/tmp/aegis.log"
 				elif [[ $MITMPKG == com.gocheats.launcher ]]; then
 					log_path=$(ls -lt /data/data/com.nianticlabs.pokemongo/cache/Exegg* | grep -E "^-" | head -n 1 | awk '{print $NF}')
 				else
@@ -461,6 +477,7 @@ if result=$(check_mitmpkg); then
 				if (( current_time - timestamp_epoch < 120 )); then
 					log -p i -t eMagiskATVService "The log was modified within the last 120 seconds. No action required."
 				else
+					log -p i -t eMagiskATVService "The log wasn't modified within the last 120 seconds. Forcing restart of MITM. ts: $timestamp_epoch, time now: $current_time"
 					force_restart
 				fi
 			fi
