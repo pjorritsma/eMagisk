@@ -160,47 +160,6 @@ configfile_rdm() {
 	else
 		log -p i -t eMagiskATVService "Failed to pull the info. Make sure $($CONFIGFILE) exists and has the correct data."
 	fi
-
-	# RDM connection check
-
-	rdmConnect=$(curl -s -k -o /dev/null -w "%{http_code}" -u $rdm_user:$rdm_password "$rdm_backendURL/api/get_data?show_devices=true")
-	if [[ $rdmConnect = "200" ]]; then
-		log -p i -t eMagiskATVService "RDM connection status: $rdmConnect"
-		log -p i -t eMagiskATVService "RDM Connection was successful!"
-		led_red
-	elif [[ $rdmConnect = "401" ]]; then
-		log -p i -t eMagiskATVService "RDM connection status: $rdmConnect -> Recheck in 4 minutes"
-		log -p i -t eMagiskATVService "Check your $CONFIGFILE values, credentials and rdm_user permissions!"
-		led_blue
-		webhook "Check your $CONFIGFILE values, credentials and rdm_user permissions! RDM connection status: $rdmConnect"
-		sleep $((240+$RANDOM%10))
-	elif [[ $rdmConnect = "Internal" ]]; then
-		log -p i -t eMagiskATVService "RDM connection status: $rdmConnect -> Recheck in 4 minutes"
-		log -p i -t eMagiskATVService "The RDM Server couldn't response properly to eMagisk!"
-		led_red
-		webhook "The RDM Server couldn't response properly to eMagisk! RDM connection status: $rdmConnect"
-		sleep $((240+$RANDOM%10))
-
-	elif [[ -z $rdmConnect ]]; then
-		log -p i -t eMagiskATVService "RDM connection status: $rdmConnect -> Recheck in 4 minutes"
-		log -p i -t eMagiskATVService "Check your ATV internet connection!"
-		led_blue
-		webhook "Check your ATV internet connection! RDM connection status: $rdmConnect"
-		counter=$((counter+1))
-		if [[ $counter -gt 4 ]];then
-			log -p i -t eMagiskATVService "Critical restart threshold of $counter reached. Rebooting device..."
-			reboot
-			# We need to wait for the reboot to actually happen or the process might be interrupted
-			sleep 60 
-		fi
-		sleep $((240+$RANDOM%10))
-	else
-		log -p i -t eMagiskATVService "RDM connection status: $rdmConnect -> Recheck in 4 minutes"
-		log -p i -t eMagiskATVService "Something different went wrong..."
-		led_blue
-		webhook "Something different went wrong..."
-		sleep $((240+$RANDOM%10))
-	fi
 }
 
 autoupdate() {
