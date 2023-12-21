@@ -48,14 +48,16 @@ led_blue(){
 # Stops MITM and Pogo and restarts MITM MappingService
 
 force_restart() {
-	killall com.nianticlabs.pokemongo
+	pogo_process_running=$(busybox ps | grep com.nianticlabs.pokemongo)
+	if [ -n "$pogo_process_running" ]; then
+		killall com.nianticlabs.pokemongo
+	fi
 	if [ "$(pm list packages com.gocheats.launcher)" = "package:com.gocheats.launcher" ]; then
 		am force-stop $MITMPKG
 		sleep 5
-		monkey -p $MITMPKG 1
+		am start -n $MITMPKG/.MainActivity
 	else
 		am stopservice $MITMPKG/com.pokemod.atlas.services.MappingService
-		am force-stop $POGOPKG
 		am force-stop $MITMPKG
 		sleep 5
 		android_version=$(getprop ro.build.version.release)
@@ -349,7 +351,7 @@ if [ ! -f "$cacert_path" ]; then
 fi
 
 
-# Health Service by Emi and Bubble with a little root touch
+# Health Service
 
 if result=$(check_mitmpkg); then
 	(
@@ -377,7 +379,7 @@ if result=$(check_mitmpkg); then
 				log -p -i -t eMagiskATVService "Couldn't find the config file"
 			fi
 
-			if tail -n 1 /data/local/tmp/atlas.log | grep -q "Could not send heartbeat"; then
+			if [[ "$MITMPKG" == com.pokemod.atlas* && $(tail -n 1 /data/local/tmp/atlas.log | grep -q "Could not send heartbeat") ]]; then
 				force_restart
 			fi
 
@@ -389,58 +391,79 @@ if result=$(check_mitmpkg); then
 				sleep 60 
 			fi
 
-			log -p i -t eMagiskATVService "Started health check!"
-			response=$(curl -s -w "%{http_code}" --cacert "$cacert_path" -u "$rdm_user":"$rdm_password" "$rdm_backendURL/api/get_data?show_devices=true&formatted=false")
-			statusCode=$(echo "$response" | tail -c 4)
-			
-			if [ "$statusCode" -ne 200 ]; then
-				case "$statusCode" in
-					401)
-						message="Unauthorized. Check your credentials."
-						;;
-					404)
-						message="Resource not found."
-						;;
-					500)
-						message="Internal Server Error. Check the server logs."
-						;;
-					*)
-						message="Something went wrong with the request. Status code: $statusCode."
-						;;
-				esac
+			if [ -n "$rdm_user" ] && [ -n "$rdm_password" ] && [ -n "$rdm_backend" ]; then # In case rdm variables are confiugred
+				log -p i -t eMagiskATVService "Started rdm health check!"
+				response=$(curl -s -w "%{http_code}" --cacert "$cacert_path" -u "$rdm_user":"$rdm_password" "$rdm_backendURL/api/get_data?show_devices=true&formatted=false")
+				statusCode=$(echo "$response" | tail -c 4)
+				
+				if [ "$statusCode" -ne 200 ]; then
+					case "$statusCode" in
+						401)
+							message="Unauthorized. Check your credentials."
+							;;
+						404)
+							message="Resource not found."
+							;;
+						500)
+							message="Internal Server Error. Check the server logs."
+							;;
+						*)
+							message="Something went wrong with the request. Status code: $statusCode."
+							;;
+					esac
 
-				log -p i -t eMagiskATVService "RDM statusCode error: $message"
-				continue
-			fi
-			
-			rdmInfo=$(echo "$response" | sed '$s/...$//')
-			rdmTimestamp=$(echo "$rdmInfo" | jq -r '.data.timestamp')
-			lastSeens=$(echo "$rdmInfo" | jq -r '.data.devices[] | select(.uuid | startswith("'"$mitmDeviceName"'")) | .last_seen')
-
-			for lastSeen in $lastSeens
-			do
-				log -p i -t eMagiskATVService "Found our device! Checking for timestamps..."
-				calcTimeDiff=$(( $rdmTimestamp - $lastSeen ))
-
-				if [[ $calcTimeDiff -gt 300 ]]; then
-					log -p i -t eMagiskATVService "Last seen at RDM is greater than 5 minutes -> MITM Service will be restarting..."
-					force_restart
-					led_blue
-					counter=$((counter+1))
-					log -p i -t eMagiskATVService "Counter is now set at $counter. device will be rebooted if counter reaches 4 failed restarts."
-					webhook "Counter is now set at $counter. device will be rebooted if counter reaches 4 failed restarts."
-					continue 2
-				elif [[ $calcTimeDiff -le 10 ]]; then
-					log -p i -t eMagiskATVService "Our device is live!"
-					counter=0
-					led_red
-				else
-					log -p i -t eMagiskATVService "Last seen time is a bit off. Will check again later."
-					counter=0
-					led_red
+					log -p i -t eMagiskATVService "RDM statusCode error: $message"
+					continue
 				fi
-			done
-			log -p i -t eMagiskATVService "Scheduling next check in 4 minutes..."
+				
+				rdmInfo=$(echo "$response" | sed '$s/...$//')
+				rdmTimestamp=$(echo "$rdmInfo" | jq -r '.data.timestamp')
+				lastSeens=$(echo "$rdmInfo" | jq -r '.data.devices[] | select(.uuid | startswith("'"$mitmDeviceName"'")) | .last_seen')
+
+				for lastSeen in $lastSeens
+				do
+					log -p i -t eMagiskATVService "Found our device! Checking for timestamps..."
+					calcTimeDiff=$(( $rdmTimestamp - $lastSeen ))
+
+					if [[ $calcTimeDiff -gt 300 ]]; then
+						log -p i -t eMagiskATVService "Last seen at RDM is greater than 5 minutes -> MITM Service will be restarting..."
+						force_restart
+						led_blue
+						counter=$((counter+1))
+						log -p i -t eMagiskATVService "Counter is now set at $counter. device will be rebooted if counter reaches 4 failed restarts."
+						webhook "Counter is now set at $counter. device will be rebooted if counter reaches 4 failed restarts."
+						continue 2
+					elif [[ $calcTimeDiff -le 10 ]]; then
+						log -p i -t eMagiskATVService "Our device is live!"
+						counter=0
+						led_red
+					else
+						log -p i -t eMagiskATVService "Last seen time is a bit off. Will check again later."
+						counter=0
+						led_red
+					fi
+				done
+				log -p i -t eMagiskATVService "Scheduling next check in 4 minutes..."
+			else # As rdm variables aren't configured, we'll check the logs last timestamp
+				log -p i -t eMagiskATVService "Started log file health check!"
+				if [[ $MITMPKG == com.pokemod.atlas* ]]; then
+					log_path="/data/local/tmp/atlas.log"
+				elif [[ $MITMPKG == com.gocheats.launcher ]]; then
+					log_path=$(ls -lt /data/data/com.nianticlabs.pokemongo/cache/Exegg* | grep -E "^-" | head -n 1 | awk '{print $NF}')
+				else
+					log -p i -t eMagiskATVService "No MITM detected, skipping health check"
+					continue
+				fi
+				# Store the timestamp of the log file into another variable using stat
+				timestamp_epoch=$(stat -c "%Y" "$log_path")
+				current_time=$(date +%s)
+
+				if (( current_time - timestamp_epoch < 120 )); then
+					log -p i -t eMagiskATVService "The log was modified within the last 120 seconds. No action required."
+				else
+					force_restart
+				fi
+			fi
 		done
 	) &
 else
