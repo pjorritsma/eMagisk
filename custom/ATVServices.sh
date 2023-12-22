@@ -435,10 +435,8 @@ if result=$(check_mitmpkg); then
 			
 			# Check if the process is running and adjust I/O priority if found
 			if [ -n "$BUSYBOX_PS_OUTPUT" ]; then
-				echo "com.nianticlabs.pokemongo is running. Adjusting I/O priority..."
+				log -p i -t eMagiskATVService "com.nianticlabs.pokemongo is running. Adjusting I/O priority..."
 				ionice -p $(pidof com.nianticlabs.pokemongo) -c 0 -n 0
-			else
-				echo "com.nianticlabs.pokemongo is not running."
 			fi
 
 			log -p i -t eMagiskATVService "Started health check!"
