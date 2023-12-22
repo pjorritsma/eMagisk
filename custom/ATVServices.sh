@@ -430,6 +430,17 @@ if result=$(check_mitmpkg); then
 				sleep 60 
 			fi
 
+			# Check if com.nianticlabs.pokemongo is running
+			BUSYBOX_PS_OUTPUT=$(busybox ps | grep -E "com\.nianticlabs\.pokemongo")
+			
+			# Check if the process is running and adjust I/O priority if found
+			if [ -n "$BUSYBOX_PS_OUTPUT" ]; then
+				echo "com.nianticlabs.pokemongo is running. Adjusting I/O priority..."
+				ionice -p $(pidof com.nianticlabs.pokemongo) -c 0 -n 0
+			else
+				echo "com.nianticlabs.pokemongo is not running."
+			fi
+
 			log -p i -t eMagiskATVService "Started health check!"
 			response=$(curl -s -w "%{http_code}" --cacert "$cacert_path" -u "$rdm_user":"$rdm_password" "$rdm_backendURL/api/get_data?show_devices=true&formatted=false")
 			statusCode=$(echo "$response" | tail -c 4)
