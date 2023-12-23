@@ -2,7 +2,7 @@
 
 # eMagisk
 
-Installs useful binaries: bash, curl, nano, strace, eventrec and tcpdump. Also optionally installs an sh that tries to recover the MITM when stuff goes wrong.
+Installs binaries and scripts for QoL. Also runs a sh that tries to recover the MITM when stuff goes wrong.
 
 ---
 
