@@ -8,7 +8,7 @@ setprop net.dns1 1.1.1.1 && setprop net.dns2 4.4.4.4
 # Check for the mitm pkg
 
 get_mitm_pkg() { # This function is so hardcoded that I'm allergic to it 
-	ps aux | grep -E -C0 "atlas|gocheats" | grep -C0 -v grep | awk -F ' ' '/com.pokemod.atlas/{print $NF} /com.gocheats.launcher/{print $NF}' | grep -E -C0 "atlas|gocheats" | sed 's/^[0-9]*://' | sed 's/:mapping$//'
+	busybox ps aux | grep -E -C0 "atlas|gocheats" | grep -C0 -v grep | grep -v mapping | awk -F ' ' '/com.pokemod.atlas/{print $NF} /com.gocheats.launcher/{print $NF}' | grep -E -C0 "atlas|gocheats" | sed 's/^[0-9]*://'
 }
 
 check_mitmpkg() {
