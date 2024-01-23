@@ -45,8 +45,11 @@ get_mitm_pkg() {
 MITMPKG=$(get_mitm_pkg)
 
 mitmDeviceName="NONAME"
+# Check if $MITMPKG contains "aegis"
+if echo "$MITMPKG" | grep -q "aegis"; then
+    mitmDeviceName=$(cat /data/local/tmp/atlas_config.json | awk -F\" '{print $12}')
 # Check if $MITMPKG contains "atlas"
-if echo "$MITMPKG" | grep -q "atlas"; then
+elif echo "$MITMPKG" | grep -q "atlas"; then
     mitmDeviceName=$(cat /data/local/tmp/atlas_config.json | awk -F\" '{print $12}')
 elif [ "$MITMPKG" = "com.gocheats.launcher" ]; then
     mitmDeviceName=$(cat /data/local/tmp/config.json | awk -F\" '/device_name/ {print $4}')
@@ -76,7 +79,10 @@ else
 fi
 
 
-if [ -e "/data/local/tmp/atlas.log" ]; then
+if [ -e "/data/local/tmp/aegis.log" ]; then
+    no_license=$(busybox tail -n150 "/data/local/tmp/aegis.log" | grep 'Not licensed' | wc -l)
+    busybox tail "/data/local/tmp/aegis.log"
+elif [ -e "/data/local/tmp/atlas.log" ]; then
     no_license=$(busybox tail -n150 "/data/local/tmp/atlas.log" | grep 'Not licensed' | wc -l)
     busybox tail "/data/local/tmp/atlas.log"
 elif [ "$MITMPKG" = "com.gocheats.launcher" ]; then
