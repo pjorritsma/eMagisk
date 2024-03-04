@@ -8,13 +8,19 @@ setprop net.dns1 1.1.1.1 && setprop net.dns2 4.4.4.4
 # Check for the mitm pkg
 
 get_mitm_pkg() { # This function is so hardcoded that I'm allergic to it 
-	ps aux | grep -E -C0 "atlas|gocheats" | grep -C0 -v grep | awk -F ' ' '/com.pokemod.atlas/{print $NF} /com.gocheats.launcher/{print $NF}' | grep -E -C0 "atlas|gocheats" | sed 's/^[0-9]*://' | sed 's/:mapping$//'
+	busybox ps aux | grep -E -C0 "atlas|gocheats" | grep -C0 -v grep | grep -v mapping | awk -F ' ' '/com.pokemod.atlas/{print $NF} /com.gocheats.launcher/{print $NF}' | grep -E -C0 "atlas|gocheats" | sed 's/^[0-9]*://'
 }
 
 check_mitmpkg() {
 	if [ "$(pm list packages com.gocheats.launcher)" = "package:com.gocheats.launcher" ]; then
 		log -p i -t eMagiskATVService "Found GC!"
 		MITMPKG=com.gocheats.launcher
+	elif [ "$(pm list packages com.pokemod.aegis.beta)" = "package:com.pokemod.aegis.beta" ]; then
+		log -p i -t eMagiskATVService "Found Aegis developer version!"
+		MITMPKG=com.pokemod.aegis.beta
+	elif [ "$(pm list packages com.pokemod.aegis)" = "package:com.pokemod.aegis" ]; then
+		log -p i -t eMagiskATVService "Found Aegis production version!"
+		MITMPKG=com.pokemod.aegis
 	elif [ "$(pm list packages com.pokemod.atlas.beta)" = "package:com.pokemod.atlas.beta" ]; then
 		log -p i -t eMagiskATVService "Found Atlas developer version!"
 		MITMPKG=com.pokemod.atlas.beta
@@ -48,14 +54,20 @@ led_blue(){
 # Stops MITM and Pogo and restarts MITM MappingService
 
 force_restart() {
-	killall com.nianticlabs.pokemongo
+	pogo_process_running=$(busybox ps | grep com.nianticlabs.pokemongo)
+	if [ -n "$pogo_process_running" ]; then
+		killall com.nianticlabs.pokemongo
+	fi
 	if [ "$(pm list packages com.gocheats.launcher)" = "package:com.gocheats.launcher" ]; then
 		am force-stop $MITMPKG
 		sleep 5
-		monkey -p $MITMPKG 1
-	else
-		am stopservice $MITMPKG/com.pokemod.atlas.services.MappingService
-		am force-stop $POGOPKG
+		am start -n $MITMPKG/.MainActivity
+	elif [[ $MITMPKG == com.pokemod* ]]; then
+		if [[ $MITMPKG == com.pokemod.atlas* ]]; then
+			am stopservice $MITMPKG/com.pokemod.atlas.services.MappingService
+		elif [[ $MITMPKG == com.pokemod.aegis* ]]; then
+			am stopservice $MITMPKG/com.pokemod.aegis.services.MappingService
+		fi
 		am force-stop $MITMPKG
 		sleep 5
 		android_version=$(getprop ro.build.version.release)
@@ -64,7 +76,11 @@ force_restart() {
 			sleep 3
    			input keyevent KEYCODE_HOME
 		fi
-		am startservice $MITMPKG/com.pokemod.atlas.services.MappingService
+		if [[ $MITMPKG == com.pokemod.atlas* ]]; then
+			am startservice $MITMPKG/com.pokemod.atlas.services.MappingService
+		elif [[ $MITMPKG == com.pokemod.aegis* ]]; then
+			am startservice $MITMPKG/com.pokemod.aegis.services.MappingService
+		fi
 	fi
 	log -p i -t eMagiskATVService "Services were restarted!"
 }
@@ -158,48 +174,7 @@ configfile_rdm() {
 		source $CONFIGFILE
 		export rdm_user rdm_password rdm_backendURL discord_webhook timezone autoupdate
 	else
-		log -p i -t eMagiskATVService "Failed to pull the info. Make sure $($CONFIGFILE) exists and has the correct data."
-	fi
-
-	# RDM connection check
-
-	rdmConnect=$(curl -s -k -o /dev/null -w "%{http_code}" -u $rdm_user:$rdm_password "$rdm_backendURL/api/get_data?show_devices=true")
-	if [[ $rdmConnect = "200" ]]; then
-		log -p i -t eMagiskATVService "RDM connection status: $rdmConnect"
-		log -p i -t eMagiskATVService "RDM Connection was successful!"
-		led_red
-	elif [[ $rdmConnect = "401" ]]; then
-		log -p i -t eMagiskATVService "RDM connection status: $rdmConnect -> Recheck in 4 minutes"
-		log -p i -t eMagiskATVService "Check your $CONFIGFILE values, credentials and rdm_user permissions!"
-		led_blue
-		webhook "Check your $CONFIGFILE values, credentials and rdm_user permissions! RDM connection status: $rdmConnect"
-		sleep $((240+$RANDOM%10))
-	elif [[ $rdmConnect = "Internal" ]]; then
-		log -p i -t eMagiskATVService "RDM connection status: $rdmConnect -> Recheck in 4 minutes"
-		log -p i -t eMagiskATVService "The RDM Server couldn't response properly to eMagisk!"
-		led_red
-		webhook "The RDM Server couldn't response properly to eMagisk! RDM connection status: $rdmConnect"
-		sleep $((240+$RANDOM%10))
-
-	elif [[ -z $rdmConnect ]]; then
-		log -p i -t eMagiskATVService "RDM connection status: $rdmConnect -> Recheck in 4 minutes"
-		log -p i -t eMagiskATVService "Check your ATV internet connection!"
-		led_blue
-		webhook "Check your ATV internet connection! RDM connection status: $rdmConnect"
-		counter=$((counter+1))
-		if [[ $counter -gt 4 ]];then
-			log -p i -t eMagiskATVService "Critical restart threshold of $counter reached. Rebooting device..."
-			reboot
-			# We need to wait for the reboot to actually happen or the process might be interrupted
-			sleep 60 
-		fi
-		sleep $((240+$RANDOM%10))
-	else
-		log -p i -t eMagiskATVService "RDM connection status: $rdmConnect -> Recheck in 4 minutes"
-		log -p i -t eMagiskATVService "Something different went wrong..."
-		led_blue
-		webhook "Something different went wrong..."
-		sleep $((240+$RANDOM%10))
+		log -p i -t eMagiskATVService "Failed to pull the config file. Make sure $($CONFIGFILE) exists and has the correct data."
 	fi
 }
 
@@ -390,7 +365,7 @@ if [ ! -f "$cacert_path" ]; then
 fi
 
 
-# Health Service by Emi and Bubble with a little root touch
+# Health Service
 
 if result=$(check_mitmpkg); then
 	(
@@ -418,7 +393,7 @@ if result=$(check_mitmpkg); then
 				log -p -i -t eMagiskATVService "Couldn't find the config file"
 			fi
 
-			if tail -n 1 /data/local/tmp/atlas.log | grep -q "Could not send heartbeat"; then
+			if [[ "$MITMPKG" == com.pokemod.atlas* && $(tail -n 1 /data/local/tmp/atlas.log | grep -q "Could not send heartbeat") ]]; then
 				force_restart
 			fi
 
@@ -439,58 +414,83 @@ if result=$(check_mitmpkg); then
 				ionice -p $(pidof com.nianticlabs.pokemongo) -c 0 -n 0
 			fi
 
-			log -p i -t eMagiskATVService "Started health check!"
-			response=$(curl -s -w "%{http_code}" --cacert "$cacert_path" -u "$rdm_user":"$rdm_password" "$rdm_backendURL/api/get_data?show_devices=true&formatted=false")
-			statusCode=$(echo "$response" | tail -c 4)
-			
-			if [ "$statusCode" -ne 200 ]; then
-				case "$statusCode" in
-					401)
-						message="Unauthorized. Check your credentials."
-						;;
-					404)
-						message="Resource not found."
-						;;
-					500)
-						message="Internal Server Error. Check the server logs."
-						;;
-					*)
-						message="Something went wrong with the request. Status code: $statusCode."
-						;;
-				esac
+			if [ -n "$rdm_user" ] && [ -n "$rdm_password" ] && [ -n "$rdm_backend" ]; then # In case rdm variables are confiugred
+				log -p i -t eMagiskATVService "Started rdm health check!"
+				response=$(curl -s -w "%{http_code}" --cacert "$cacert_path" -u "$rdm_user":"$rdm_password" "$rdm_backendURL/api/get_data?show_devices=true&formatted=false")
+				statusCode=$(echo "$response" | tail -c 4)
+				
+				if [ "$statusCode" -ne 200 ]; then
+					case "$statusCode" in
+						401)
+							message="Unauthorized. Check your credentials."
+							;;
+						404)
+							message="Resource not found."
+							;;
+						500)
+							message="Internal Server Error. Check the server logs."
+							;;
+						*)
+							message="Something went wrong with the request. Status code: $statusCode."
+							;;
+					esac
 
-				log -p i -t eMagiskATVService "RDM statusCode error: $message"
-				continue
-			fi
-			
-			rdmInfo=$(echo "$response" | sed '$s/...$//')
-			rdmTimestamp=$(echo "$rdmInfo" | jq -r '.data.timestamp')
-			lastSeens=$(echo "$rdmInfo" | jq -r '.data.devices[] | select(.uuid | startswith("'"$mitmDeviceName"'")) | .last_seen')
-
-			for lastSeen in $lastSeens
-			do
-				log -p i -t eMagiskATVService "Found our device! Checking for timestamps..."
-				calcTimeDiff=$(( $rdmTimestamp - $lastSeen ))
-
-				if [[ $calcTimeDiff -gt 300 ]]; then
-					log -p i -t eMagiskATVService "Last seen at RDM is greater than 5 minutes -> MITM Service will be restarting..."
-					force_restart
-					led_blue
-					counter=$((counter+1))
-					log -p i -t eMagiskATVService "Counter is now set at $counter. device will be rebooted if counter reaches 4 failed restarts."
-					webhook "Counter is now set at $counter. device will be rebooted if counter reaches 4 failed restarts."
-					continue 2
-				elif [[ $calcTimeDiff -le 10 ]]; then
-					log -p i -t eMagiskATVService "Our device is live!"
-					counter=0
-					led_red
-				else
-					log -p i -t eMagiskATVService "Last seen time is a bit off. Will check again later."
-					counter=0
-					led_red
+					log -p i -t eMagiskATVService "RDM statusCode error: $message"
+					continue
 				fi
-			done
-			log -p i -t eMagiskATVService "Scheduling next check in 4 minutes..."
+				
+				rdmInfo=$(echo "$response" | sed '$s/...$//')
+				rdmTimestamp=$(echo "$rdmInfo" | jq -r '.data.timestamp')
+				lastSeens=$(echo "$rdmInfo" | jq -r '.data.devices[] | select(.uuid | startswith("'"$mitmDeviceName"'")) | .last_seen')
+
+				for lastSeen in $lastSeens
+				do
+					log -p i -t eMagiskATVService "Found our device! Checking for timestamps..."
+					calcTimeDiff=$(( $rdmTimestamp - $lastSeen ))
+
+					if [[ $calcTimeDiff -gt 300 ]]; then
+						log -p i -t eMagiskATVService "Last seen at RDM is greater than 5 minutes -> MITM Service will be restarting..."
+						force_restart
+						led_blue
+						counter=$((counter+1))
+						log -p i -t eMagiskATVService "Counter is now set at $counter. device will be rebooted if counter reaches 4 failed restarts."
+						webhook "Counter is now set at $counter. device will be rebooted if counter reaches 4 failed restarts."
+						continue 2
+					elif [[ $calcTimeDiff -le 10 ]]; then
+						log -p i -t eMagiskATVService "Our device is live!"
+						counter=0
+						led_red
+					else
+						log -p i -t eMagiskATVService "Last seen time is a bit off. Will check again later."
+						counter=0
+						led_red
+					fi
+				done
+				log -p i -t eMagiskATVService "Scheduling next check in 4 minutes..."
+			else # As rdm variables aren't configured, we'll check the logs last timestamp
+				log -p i -t eMagiskATVService "Started log file health check!"
+				if [[ $MITMPKG == com.pokemod.atlas* ]]; then
+					log_path="/data/local/tmp/atlas.log"
+				elif [[ $MITMPKG == com.pokemod.aegis* ]]; then
+					log_path="/data/local/tmp/aegis.log"
+				elif [[ $MITMPKG == com.gocheats.launcher ]]; then
+					log_path=$(ls -lt /data/data/com.nianticlabs.pokemongo/cache/Exegg* | grep -E "^-" | head -n 1 | awk '{print $NF}')
+				else
+					log -p i -t eMagiskATVService "No MITM detected, skipping health check"
+					continue
+				fi
+				# Store the timestamp of the log file into another variable using stat
+				timestamp_epoch=$(stat -c "%Y" "$log_path")
+				current_time=$(date +%s)
+
+				calcTimeDiff=$(( $current_time - $timestamp_epoch ))
+				if [[ $calcTimeDiff -le 120 ]]; then
+					log -p i -t eMagiskATVService "The log was modified within the last 120 seconds. No action required."
+				else
+					log -p i -t eMagiskATVService "The log wasn't modified within the last 120 seconds. Forcing restart of MITM. ts: $timestamp_epoch, time now: $current_time"
+					force_restart
+				fi
+			fi
 		done
 	) &
 else
