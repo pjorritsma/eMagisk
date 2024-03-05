@@ -266,7 +266,13 @@ if [ "$(magisk -V)" -le 23000 ]; then
 		fi
 	done
 else
-	log -p i -t eMagiskATVService "Magisk version is higher than 23000. Not checking for magisk's policies."
+	if [ "$policy" != 2 ]; then
+		log -p i -t eMagiskATVService "$package current policy is $policy. Adding root permissions..."
+		packageUID=$(dumpsys package "$package" | grep userId | head -n1 | cut -d= -f2)
+		sqlite3 /data/adb/magisk.db "INSERT INTO policies (uid, policy, until, logging, notification) VALUES ($packageUID, 2, 0, 1, 1)"
+	else
+		log -p i -t eMagiskATVService "Root permissions for $package are OK!"
+  	fi
 fi
 
 # Set mitm mock location permission as ignore
