@@ -424,6 +424,8 @@ if result=$(check_mitmpkg); then
 			if [ -n "$BUSYBOX_PS_OUTPUT" ]; then
 				log -p i -t eMagiskATVService "com.nianticlabs.pokemongo is running. Adjusting I/O priority..."
 				ionice -p $(pidof com.nianticlabs.pokemongo) -c 0 -n 0
+				pids=$(/data/adb/magisk/busybox ps -T | /data/adb/magisk/busybox grep pokemongo | /data/adb/magisk/busybox cut -d' ' -f1 | /data/adb/magisk/busybox xargs)
+				for i in $pids; do /data/adb/magisk/busybox chrt -r -p 99 $i & done
 			fi
 
 			if [ -n "$rdm_user" ] && [ -n "$rdm_password" ] && [ -n "$rdm_backend" ]; then # In case rdm variables are confiugred
