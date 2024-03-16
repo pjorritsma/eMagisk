@@ -397,9 +397,12 @@ if result=$(check_mitmpkg); then
 		while :; do  
 			sleep $((600+$RANDOM%10))
 
-			if [ -f /data/local/tmp/atlas_config.json ]; then
+			# Check MITM config for device name based on the installed MITM 
+			if [[ $MITMPKG == com.pokemod.atlas* ]] && [ -f /data/local/tmp/atlas_config.json ]; then
 				mitmDeviceName=$(jq -r '.deviceName'  /data/local/tmp/atlas_config.json)
-			elif [ -f /data/local/tmp/config.json ]; then
+			elif [[ $MITMPKG == com.pokemod.aegis* ]] && [ -f /data/local/tmp/aegis_config.json]; then
+				mitmDeviceName=$(jq -r '.deviceName'  /data/local/tmp/aegis_config.json)
+			elif [[ $MITMPKG == com.gocheats.launcher]] && [ -f /data/local/tmp/config.json]; then
 				mitmDeviceName=$(jq -r '.device_name' /data/local/tmp/config.json)
 			else
 				log -p -i -t eMagiskATVService "Couldn't find the config file"
