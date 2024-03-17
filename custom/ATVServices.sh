@@ -36,6 +36,20 @@ check_mitmpkg() {
 	fi
 }
 
+get_deviceName() {
+	if [[ $MITMPKG == com.pokemod.atlas* ]] && [ -f /data/local/tmp/atlas_config.json ]; then
+		mitmDeviceName=$(jq -r '.deviceName' /data/local/tmp/atlas_config.json)
+	elif [[ $MITMPKG == com.pokemod.aegis* ]] && [ -f /data/local/tmp/aegis_config.json ]; then
+		mitmDeviceName=$(jq -r '.deviceName' /data/local/tmp/aegis_config.json)
+	elif [[ $MITMPKG == com.sy1vi3.cosmog ]] && [ -f /data/local/tmp/cosmog.json ]; then
+		mitmDeviceName=$(jq -r '.device_id' /data/local/tmp/cosmog.json)
+	elif [[ $MITMPKG == com.gocheats.launcher ]] && [ -f /data/local/tmp/config.json ]; then
+		mitmDeviceName=$(jq -r '.device_name' /data/local/tmp/config.json)
+	else
+		log -p i -t eMagiskATVService "Couldn't find the config file"
+	fi
+}
+
 # This is for the X96 Mini and X96W Atvs. Can be adapted to other ATVs that have a led status indicator
 
 led_red(){
@@ -125,14 +139,7 @@ webhook() {
 	playStoreVersion=$(dumpsys package com.android.vending | grep versionName | head -n 1 | cut -d "=" -f 2 | cut -d " " -f 1)
 	android_version=$(getprop ro.build.version.release)
 	
-	mitmDeviceName="NO NAME"
-	if [ -f /data/local/tmp/atlas_config.json ]; then
-		mitmDeviceName=$(cat /data/local/tmp/atlas_config.json | awk -F\" '{print $12}')
-  	elif [ -f /data/local/tmp/atlas_config.json ]; then
-   		
-	else
-		mitmDeviceName=$(cat /data/local/tmp/config.json | awk -F\" '/device_name/ {print $4}')
-	fi
+	get_deviceName
 
 	# Get mitm version
 	mitm_version="$(dumpsys package "$MITMPKG" | awk -F "=" '/versionName/ {print $2}')"
@@ -390,7 +397,7 @@ fi
 
 if result=$(check_mitmpkg); then
 	(
-		log -p i -t eMagiskATVService "eMagisk: Astu's fork. Starting health check service in 4 minutes..."
+		log -p i -t eMagiskATVService "eMagisk: Astu's fork. Starting health check service in 4 minutes... MITM: $MITMPKG"
 		counter=0
 		rdmDeviceID=1
 		log -p i -t eMagiskATVService "Start counter at $counter"
@@ -404,23 +411,15 @@ if result=$(check_mitmpkg); then
 		fi
 		webhook "Booting"
 		while :; do  
-			sleep $((600+$RANDOM%10))
+			sleep $((120+$RANDOM%10))
 
 			# Check MITM config for device name based on the installed MITM 
-			if [[ $MITMPKG == com.pokemod.atlas* ]] && [ -f /data/local/tmp/atlas_config.json ]; then
-				mitmDeviceName=$(jq -r '.deviceName'  /data/local/tmp/atlas_config.json)
-			elif [[ $MITMPKG == com.pokemod.aegis* ]] && [ -f /data/local/tmp/aegis_config.json]; then
-				mitmDeviceName=$(jq -r '.deviceName'  /data/local/tmp/aegis_config.json)
-			elif [[ $MITMPKG == com.sy1vi3.cosmog ]] && [ -f /data/local/tmp/cosmog.json]; then
-				mitmDeviceName=$(jq -r '.device_id'  /data/local/tmp/cosmog.json)
-			elif [[ $MITMPKG == com.gocheats.launcher]] && [ -f /data/local/tmp/config.json]; then
-				mitmDeviceName=$(jq -r '.device_name' /data/local/tmp/config.json)
-			else
-				log -p -i -t eMagiskATVService "Couldn't find the config file"
-			fi
+			get_deviceName
 
-			if [[ "$MITMPKG" == com.pokemod.atlas* && $(tail -n 1 /data/local/tmp/atlas.log | grep -q "Could not send heartbeat") ]]; then
-				force_restart
+			if [[ "$MITMPKG" == com.pokemod.atlas* ]]; then
+				if [[ $(tail -n 1 /data/local/tmp/atlas.log | grep -q "Could not send heartbeat")  ]]; then
+    				force_restart
+				fi
 			fi
 
 			if [[ $counter -gt 3 ]];then
@@ -503,16 +502,17 @@ if result=$(check_mitmpkg); then
 					log_path="/data/local/tmp/aegis.log"
 				elif [[ $MITMPKG == com.sy1vi3* ]]; then
 					if ! ps -a | grep -v grep | grep "$MITMPKG"; then
-						log -p i -t eMagiskATVService "Process is not alive, starting it"
+						log -p i -t eMagiskATVService "Process $MITMPKG is not alive, starting it"
 						am start -n $MITMPKG/.MainActivity
+						counter=$((counter+1))
       					else
-	   					log -p i -t eMagiskATVService "Process is alive. No action required."
+	   					log -p i -t eMagiskATVService "Process $MITMPKG is alive. No action required."
      					fi
 	  				continue
 				elif [[ $MITMPKG == com.gocheats.launcher ]]; then
 					log_path=$(ls -lt /data/data/com.nianticlabs.pokemongo/cache/Exegg* | grep -E "^-" | head -n 1 | awk '{print $NF}')
 				else
-					log -p i -t eMagiskATVService "No MITM detected, skipping health check"
+					log -p i -t eMagiskATVService "No MITM detected ($MITMPKG?), skipping health check."
 					continue
 				fi
 				# Store the timestamp of the log file into another variable using stat
@@ -525,6 +525,7 @@ if result=$(check_mitmpkg); then
 				else
 					log -p i -t eMagiskATVService "The log wasn't modified within the last 120 seconds. Forcing restart of MITM. ts: $timestamp_epoch, time now: $current_time"
 					force_restart
+					counter=$((counter+1))
 				fi
 			fi
 		done
