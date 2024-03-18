@@ -8,14 +8,11 @@ setprop net.dns1 1.1.1.1 && setprop net.dns2 4.4.4.4
 # Check for the mitm pkg
 
 get_mitm_pkg() { # This function is so hardcoded that I'm allergic to it 
-	busybox ps aux | grep -E -C0 "pokemod|gocheats" | grep -C0 -v grep | awk -F ' ' '/com.pokemod/{print $NF} /com.gocheats.launcher/{print $NF}' | grep -E -C0 "pokemod|gocheats" | sed -e 's/^[0-9]*://' -e 's@:.*@@g' | sort | uniq
+	busybox ps aux | grep -E -C0 "pokemod|gocheats|sy1vi3" | grep -C0 -v grep | awk -F ' ' '/com.pokemod/{print $NF} /com.sy1vi3/{print $NF} /com.gocheats.launcher/{print $NF}' | grep -E -C0 "gocheats|pokemod|sy1vi3" | sed -e 's/^[0-9]*://' -e 's@:.*@@g' | sort | uniq
 }
 
 check_mitmpkg() {
-	if [ "$(pm list packages com.gocheats.launcher)" = "package:com.gocheats.launcher" ]; then
-		log -p i -t eMagiskATVService "Found GC!"
-		MITMPKG=com.gocheats.launcher
-	elif [ "$(pm list packages com.pokemod.aegis.beta)" = "package:com.pokemod.aegis.beta" ]; then
+	if [ "$(pm list packages com.pokemod.aegis.beta)" = "package:com.pokemod.aegis.beta" ]; then
 		log -p i -t eMagiskATVService "Found Aegis developer version!"
 		MITMPKG=com.pokemod.aegis.beta
 	elif [ "$(pm list packages com.pokemod.aegis)" = "package:com.pokemod.aegis" ]; then
@@ -27,9 +24,29 @@ check_mitmpkg() {
 	elif [ "$(pm list packages com.pokemod.atlas)" = "package:com.pokemod.atlas" ]; then
 		log -p i -t eMagiskATVService "Found Atlas production version!"
 		MITMPKG=com.pokemod.atlas
+	elif [ "$(pm list packages com.sy1vi3.cosmog)" = "package:com.sy1vi3.cosmog" ]; then
+		log -p i -t eMagiskATVService "Found Cosmog!"
+		MITMPKG=com.sy1vi3.cosmog
+	elif [ "$(pm list packages com.gocheats.launcher)" = "package:com.gocheats.launcher" ]; then
+		log -p i -t eMagiskATVService "Found GC!"
+		MITMPKG=com.gocheats.launcher
 	else
 		log -p i -t eMagiskATVService "No MITM installed. Abort!"
 		exit 1
+	fi
+}
+
+get_deviceName() {
+	if [[ $MITMPKG == com.pokemod.atlas* ]] && [ -f /data/local/tmp/atlas_config.json ]; then
+		mitmDeviceName=$(jq -r '.deviceName' /data/local/tmp/atlas_config.json)
+	elif [[ $MITMPKG == com.pokemod.aegis* ]] && [ -f /data/local/tmp/aegis_config.json ]; then
+		mitmDeviceName=$(jq -r '.deviceName' /data/local/tmp/aegis_config.json)
+	elif [[ $MITMPKG == com.sy1vi3.cosmog ]] && [ -f /data/local/tmp/cosmog.json ]; then
+		mitmDeviceName=$(jq -r '.device_id' /data/local/tmp/cosmog.json)
+	elif [[ $MITMPKG == com.gocheats.launcher ]] && [ -f /data/local/tmp/config.json ]; then
+		mitmDeviceName=$(jq -r '.device_name' /data/local/tmp/config.json)
+	else
+		log -p i -t eMagiskATVService "Couldn't find the config file"
 	fi
 }
 
@@ -81,6 +98,10 @@ force_restart() {
 		elif [[ $MITMPKG == com.pokemod.aegis* ]]; then
 			am startservice $MITMPKG/com.pokemod.aegis.services.MappingService
 		fi
+	elif [[ $MITMPKG == com.sy1vi3* ]]; then
+		am force-stop $MITMPKG
+		sleep 5
+		am start -n $MITMPKG/.MainActivity
 	fi
 	log -p i -t eMagiskATVService "Services were restarted!"
 }
@@ -118,12 +139,7 @@ webhook() {
 	playStoreVersion=$(dumpsys package com.android.vending | grep versionName | head -n 1 | cut -d "=" -f 2 | cut -d " " -f 1)
 	android_version=$(getprop ro.build.version.release)
 	
-	mitmDeviceName="NO NAME"
-	if [ -f /data/local/tmp/atlas_config.json ]; then
-	mitmDeviceName=$(cat /data/local/tmp/atlas_config.json | awk -F\" '{print $12}')
-	else
-	mitmDeviceName=$(cat /data/local/tmp/config.json | awk -F\" '/device_name/ {print $4}')
-	fi
+	get_deviceName
 
 	# Get mitm version
 	mitm_version="$(dumpsys package "$MITMPKG" | awk -F "=" '/versionName/ {print $2}')"
@@ -381,7 +397,7 @@ fi
 
 if result=$(check_mitmpkg); then
 	(
-		log -p i -t eMagiskATVService "eMagisk: Astu's fork. Starting health check service in 4 minutes..."
+		log -p i -t eMagiskATVService "eMagisk: Astu's fork. Starting health check service in 4 minutes... MITM: $MITMPKG"
 		counter=0
 		rdmDeviceID=1
 		log -p i -t eMagiskATVService "Start counter at $counter"
@@ -395,21 +411,15 @@ if result=$(check_mitmpkg); then
 		fi
 		webhook "Booting"
 		while :; do  
-			sleep $((600+$RANDOM%10))
+			sleep $((120+$RANDOM%10))
 
 			# Check MITM config for device name based on the installed MITM 
-			if [[ $MITMPKG == com.pokemod.atlas* ]] && [ -f /data/local/tmp/atlas_config.json ]; then
-				mitmDeviceName=$(jq -r '.deviceName'  /data/local/tmp/atlas_config.json)
-			elif [[ $MITMPKG == com.pokemod.aegis* ]] && [ -f /data/local/tmp/aegis_config.json]; then
-				mitmDeviceName=$(jq -r '.deviceName'  /data/local/tmp/aegis_config.json)
-			elif [[ $MITMPKG == com.gocheats.launcher]] && [ -f /data/local/tmp/config.json]; then
-				mitmDeviceName=$(jq -r '.device_name' /data/local/tmp/config.json)
-			else
-				log -p -i -t eMagiskATVService "Couldn't find the config file"
-			fi
+			get_deviceName
 
-			if [[ "$MITMPKG" == com.pokemod.atlas* && $(tail -n 1 /data/local/tmp/atlas.log | grep -q "Could not send heartbeat") ]]; then
-				force_restart
+			if [[ "$MITMPKG" == com.pokemod.atlas* ]]; then
+				if [[ $(tail -n 1 /data/local/tmp/atlas.log | grep -q "Could not send heartbeat")  ]]; then
+    				force_restart
+				fi
 			fi
 
 			if [[ $counter -gt 3 ]];then
@@ -485,15 +495,24 @@ if result=$(check_mitmpkg); then
 				done
 				log -p i -t eMagiskATVService "Scheduling next check in 4 minutes..."
 			else # As rdm variables aren't configured, we'll check the logs last timestamp
-				log -p i -t eMagiskATVService "Started log file health check!"
+				log -p i -t eMagiskATVService "Started health check!"
 				if [[ $MITMPKG == com.pokemod.atlas* ]]; then
 					log_path="/data/local/tmp/atlas.log"
 				elif [[ $MITMPKG == com.pokemod.aegis* ]]; then
 					log_path="/data/local/tmp/aegis.log"
+				elif [[ $MITMPKG == com.sy1vi3* ]]; then
+					if ! ps -a | grep -v grep | grep "$MITMPKG"; then
+						log -p i -t eMagiskATVService "Process $MITMPKG is not alive, starting it"
+						am start -n $MITMPKG/.MainActivity
+						counter=$((counter+1))
+      					else
+	   					log -p i -t eMagiskATVService "Process $MITMPKG is alive. No action required."
+     					fi
+	  				continue
 				elif [[ $MITMPKG == com.gocheats.launcher ]]; then
 					log_path=$(ls -lt /data/data/com.nianticlabs.pokemongo/cache/Exegg* | grep -E "^-" | head -n 1 | awk '{print $NF}')
 				else
-					log -p i -t eMagiskATVService "No MITM detected, skipping health check"
+					log -p i -t eMagiskATVService "No MITM detected ($MITMPKG?), skipping health check."
 					continue
 				fi
 				# Store the timestamp of the log file into another variable using stat
@@ -506,6 +525,7 @@ if result=$(check_mitmpkg); then
 				else
 					log -p i -t eMagiskATVService "The log wasn't modified within the last 120 seconds. Forcing restart of MITM. ts: $timestamp_epoch, time now: $current_time"
 					force_restart
+					counter=$((counter+1))
 				fi
 			fi
 		done
