@@ -4,6 +4,19 @@
 POGOPKG=com.nianticlabs.pokemongo
 CONFIGFILE='/data/local/tmp/emagisk.config'
 setprop net.dns1 1.1.1.1 && setprop net.dns2 8.8.8.8
+# Check if $CONFIGFILE exists and has data. Pulls data and checks the RDM connection status.
+# Data stored as global variables using export
+get_config() {
+	if [[ -s $CONFIGFILE ]]; then
+		log -p i -t eMagiskATVService "$CONFIGFILE exists and has data. Data will be pulled."
+		source $CONFIGFILE
+		export rdm_user rdm_password rdm_backendURL discord_webhook timezone autoupdate
+	else
+		log -p i -t eMagiskATVService "Failed to pull the config file. Make sure $($CONFIGFILE) exists and has the correct data."
+	fi
+}
+
+get_config
 
 # Check for the mitm pkg
 
@@ -51,13 +64,14 @@ get_deviceName() {
 }
 
 # This is for the X96 Mini and X96W Atvs. Can be adapted to other ATVs that have a led status indicator
-
+### Stupidly added led management for H96Max devices. You should let it commented out if you don't run this device
 led_red(){
 	if [ -e /sys/class/leds/led-sys ]; then
 		echo 0 > /sys/class/leds/led-sys/brightness
 	elif [ -e /sys/class/leds/sys_led ]; then
 		echo 0 > /sys/class/leds/sys_led/brightness
 	fi
+	# echo 1 > /sys/class/leds/power-red/brightness ### H96MAX LED MANAGMENT
 }
 
 led_blue(){
@@ -66,6 +80,7 @@ led_blue(){
 	elif [ -e /sys/class/leds/sys_led ]; then
 		echo 1 > /sys/class/leds/sys_led/brightness
 	fi
+	# echo 0 > /sys/class/leds/power-red/brightness ### H96MAX LED MANAGMENT
 }
 
 # Stops MITM and Pogo and restarts MITM MappingService
@@ -132,11 +147,11 @@ webhook() {
 	local mac_address_nodots="$(ip link show eth0 | awk '/ether/ {print $2}' | tr -d ':')"
 	local timestamp="$(date +%Y-%m-%d_%H-%M-%S)"
 	local mitm_version="NOT INSTALLED"
-	local pogo_version="NOT INSTALLED"
+	local pogo_version="$(dumpsys package com.nianticlabs.pokemongo | grep versionName |cut -d "=" -f 2)"
 	local agent=""
 	local playStoreVersion=""
 	local temperature="$(cat /sys/class/thermal/thermal_zone0/temp | awk '{print substr($0, 1, length($0)-3)}')"
-	playStoreVersion=$(dumpsys package com.android.vending | grep versionName | head -n 1 | cut -d "=" -f 2 | cut -d " " -f 1)
+	playStoreVersion=$(dumpsys package com.android.vending | grep versionName |head -n 1|cut -d "=" -f 2)
 	android_version=$(getprop ro.build.version.release)
 	
 	get_deviceName
@@ -155,43 +170,64 @@ webhook() {
 	logcat -v colors -d > "$temp_dir/logcat_${MITMPKG}_${timestamp}_${mac_address_nodots}_selfSentLog.log"
 	
 	# Create the payload JSON
-	local payload_json="{\"username\":\"$mitmDeviceName\",\"content\":\"$message"
-	payload_json+="\\n*Device name*: $mitmDeviceName"
-	payload_json+="\\nLocal IP: ||$local_ip||"
-	payload_json+="\\nWAN IP: ||$wan_ip||"
-	payload_json+="\\nmac: $mac_address"
-	payload_json+="\\nTemp: $temperature"
-	payload_json+="\\nmitm: $MITMPKG"
-	payload_json+="\\nmitm version: $mitm_version"
-	if [[ -n "$agent" ]]; then
-		payload_json+="\\nmitm agent: $agent"
-	fi
-	payload_json+="\\npogo version: $pogo_version"
-	payload_json+="\\nPlay Store version: $playStoreVersion"
-	payload_json+="\\nAndroid version: $android_version"
-	payload_json+="\"}"
+	payload_json=$(jq -n \
+                  --arg username "$mitmDeviceName" \
+                  --arg content "$message" \
+                  --arg deviceName "$mitmDeviceName" \
+                  --arg localIp "$local_ip" \
+                  --arg wanIp "$wan_ip" \
+                  --arg mac "$mac_address" \
+                  --arg temp "$temperature" \
+                  --arg mitm "$MITMPKG" \
+                  --arg mitmVersion "$mitm_version" \
+                  --arg pogoVersion "$pogo_version" \
+                  --arg playStoreVersion "$playStoreVersion" \
+                  --arg androidVersion "$android_version" \
+                  '{
+                    username: $username,
+                    content: $content,
+                    embeds: [
+                      {
+                        title: $deviceName,
+                        fields: [
+                          {name: "Local IP", value: $localIp, inline: true},
+                          {name: "WAN IP", value: $wanIp, inline: true},
+                          {name: "MAC", value: $mac, inline: true},
+                          {name: "Temperature", value: $temp, inline: true},
+                          {name: "MITM Package", value: $mitm, inline: true},
+                          {name: "MITM Version", value: $mitmVersion, inline: true},
+                          {name: "PoGo Version", value: $pogoVersion, inline: true},
+                          {name: "Play Store Version", value: $playStoreVersion, inline: true},
+                          {name: "Android Version", value: $androidVersion, inline: true}
+                        ]
+                      }
+                    ]
+                  }')
 
 	log -p i -t eMagiskATVService "Sending discord webhook"
 	# Upload the payload JSON and logcat logs to Discord
-	if [[ $MITMPKG == com.pokemod.atlas* ]]; then
-		curl -X POST -k -H "Content-Type: multipart/form-data" -F "payload_json=$payload_json" "$discord_webhook" -F "logcat=@$temp_dir/logcat_${MITMPKG}_${timestamp}_${mac_address_nodots}_selfSentLog.log" -F "atlaslog=@/data/local/tmp/atlas.log"
+    if [[ $MITMPKG == com.pokemod.atlas* ]]; then
+        curl -X POST -k -H "Content-Type: multipart/form-data" \
+        -F "payload_json=$payload_json" \
+        -F "logcat=@$temp_dir/logcat_${MITMPKG}_${timestamp}_${mac_address_nodots}_selfSentLog.log" \
+        -F "atlaslog=@/data/local/tmp/atlas.log" \
+        "$discord_webhook"
+    # Check for com.pokemod.aegis* package and send webhook with aegis.log (or specific log for aegis)
+    elif [[ $MITMPKG == com.pokemod.aegis* ]]; then
+		curl -X POST -k -H "Content-Type: multipart/form-data" \
+        -F "payload_json=$payload_json" \
+        -F "logcat=@$temp_dir/logcat_${MITMPKG}_${timestamp}_${mac_address_nodots}_selfSentLog.log" \
+        -F "aegislog=@/data/local/tmp/aegis.log" \
+        "$discord_webhook"
 	else
-		curl -X POST -k -H "Content-Type: multipart/form-data" -F "payload_json=$payload_json" "$discord_webhook" -F "logcat=@$temp_dir/logcat_${MITMPKG}_${timestamp}_${mac_address_nodots}_selfSentLog.log"
+		# curl -X POST -k -H "Content-Type: multipart/form-data" -F "payload_json=$payload_json" "$discord_webhook" -F "logcat=@$temp_dir/logcat_${MITMPKG}_${timestamp}_${mac_address_nodots}_selfSentLog.log"
+		curl -X POST -k -H "Content-Type: multipart/form-data" \
+        -F "payload_json=$payload_json" \
+        -F "logcat=@$temp_dir/logcat_${MITMPKG}_${timestamp}_${mac_address_nodots}_selfSentLog.log" \
+    	"$discord_webhook"
 	fi
 	# Clean up temporary files
 	rm -rf "$temp_dir"
-}
-
-# Recheck if $CONFIGFILE exists and has data. Repulls data and checks the RDM connection status.
-
-configfile_rdm() {
-	if [[ -s $CONFIGFILE ]]; then
-		log -p i -t eMagiskATVService "$CONFIGFILE exists and has data. Data will be pulled."
-		source $CONFIGFILE
-		export rdm_user rdm_password rdm_backendURL discord_webhook timezone autoupdate
-	else
-		log -p i -t eMagiskATVService "Failed to pull the config file. Make sure $($CONFIGFILE) exists and has the correct data."
-	fi
 }
 
 autoupdate() {
@@ -401,7 +437,7 @@ if result=$(check_mitmpkg); then
 		counter=0
 		rdmDeviceID=1
 		log -p i -t eMagiskATVService "Start counter at $counter"
-		configfile_rdm
+		# get_config
 		# Check for updates
 		if [ "$autoupdate" = "true" ]; then
 		  log -p i -t eMagiskATVService "[AUTOUPDATE] Checking for new updates"
@@ -411,7 +447,7 @@ if result=$(check_mitmpkg); then
 		fi
 		webhook "Booting"
 		while :; do  
-		        sleep_duration=120
+			sleep_duration=120
 		        if [[ "$MITMPKG" == com.pokemod.atlas* ]]; then
 			    sleep_duration=240
 		        fi
@@ -526,8 +562,10 @@ if result=$(check_mitmpkg); then
 				calcTimeDiff=$(( $current_time - $timestamp_epoch ))
 				if [[ $calcTimeDiff -le 120 ]]; then
 					log -p i -t eMagiskATVService "The log was modified within the last 120 seconds. No action required."
+					led_red # turn red when service is up
 				else
 					log -p i -t eMagiskATVService "The log wasn't modified within the last 120 seconds. Forcing restart of MITM. ts: $timestamp_epoch, time now: $current_time"
+					led_blue # turn blue when service is down
 					force_restart
 					counter=$((counter+1))
 				fi
