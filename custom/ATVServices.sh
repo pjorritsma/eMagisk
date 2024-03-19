@@ -3,7 +3,7 @@
 # Base stuff we need
 POGOPKG=com.nianticlabs.pokemongo
 CONFIGFILE='/data/local/tmp/emagisk.config'
-setprop net.dns1 1.1.1.1 && setprop net.dns2 4.4.4.4
+setprop net.dns1 1.1.1.1 && setprop net.dns2 8.8.8.8
 
 # Check for the mitm pkg
 
