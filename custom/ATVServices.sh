@@ -441,7 +441,7 @@ if result=$(check_mitmpkg); then
 				for i in $pids; do /data/adb/magisk/busybox chrt -r -p 99 $i & done
 			fi
 
-			if [ -n "$rdm_user" ] && [ -n "$rdm_password" ] && [ -n "$rdm_backend" ]; then # In case rdm variables are confiugred
+			if [ -n "$rdm_user" ] && [ -n "$rdm_password" ] && [ -n "$rdm_backendURL" ]; then # In case rdm variables are confiugred
 				log -p i -t eMagiskATVService "Started rdm health check!"
 				response=$(curl -s -w "%{http_code}" --cacert "$cacert_path" -u "$rdm_user":"$rdm_password" "$rdm_backendURL/api/get_data?show_devices=true&formatted=false")
 				statusCode=$(echo "$response" | tail -c 4)
