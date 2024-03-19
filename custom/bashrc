@@ -554,7 +554,7 @@ export ANDROID_DATA=/data;
 export ANDROID_ROOT=/data;
 
 get_mitm_pkg() { # This function is so hardcoded that I'm allergic to it
-    busybox ps aux | grep -E -C0 "pokemod|gocheats" | grep -C0 -v grep | awk -F ' ' '/com.pokemod/{print $NF} /com.gocheats.launcher/{print $NF}' | grep -E -C0 "pokemod|gocheats" | sed -e 's/^[0-9]*://' -e 's@:.*@@g' | sort | uniq
+    busybox ps aux | grep -E -C0 "pokemod|gocheats|sy1vi3" | grep -C0 -v grep | awk -F ' ' '/com.pokemod/{print $NF} /com.sy1vi3/{print $NF} /com.gocheats.launcher/{print $NF}' | grep -E -C0 "gocheats|pokemod|sy1vi3" | sed -e 's/^[0-9]*://' -e 's@:.*@@g' | sort | uniq
 }
 MITMPKG=$(get_mitm_pkg)
 POGOPKG=com.nianticlabs.pokemongo
