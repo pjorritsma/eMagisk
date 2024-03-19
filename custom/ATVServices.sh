@@ -411,7 +411,11 @@ if result=$(check_mitmpkg); then
 		fi
 		webhook "Booting"
 		while :; do  
-			sleep $((120+$RANDOM%10))
+		        sleep_duration=120
+		        if [[ "$MITMPKG" == com.pokemod.atlas* ]]; then
+			    sleep_duration=240
+		        fi
+			sleep $((sleep_duration+$RANDOM%10))
 
 			# Check MITM config for device name based on the installed MITM 
 			get_deviceName
