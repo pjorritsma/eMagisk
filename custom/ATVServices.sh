@@ -70,8 +70,9 @@ led_red(){
 		echo 0 > /sys/class/leds/led-sys/brightness
 	elif [ -e /sys/class/leds/sys_led ]; then
 		echo 0 > /sys/class/leds/sys_led/brightness
+	elif [ -e /sys/class/leds/power-red ]; then
+	    echo 1 > /sys/class/leds/power-red/brightness # H96MAX LED Management 
 	fi
-	# echo 1 > /sys/class/leds/power-red/brightness ### H96MAX LED MANAGMENT
 }
 
 led_blue(){
@@ -79,8 +80,9 @@ led_blue(){
 		echo 1 > /sys/class/leds/led-sys/brightness
 	elif [ -e /sys/class/leds/sys_led ]; then
 		echo 1 > /sys/class/leds/sys_led/brightness
+	elif [ -e /sys/class/leds/power-red ]; then
+	    echo 0 > /sys/class/leds/power-red/brightness # H96MAX LED Management
 	fi
-	# echo 0 > /sys/class/leds/power-red/brightness ### H96MAX LED MANAGMENT
 }
 
 # Stops MITM and Pogo and restarts MITM MappingService
@@ -547,6 +549,7 @@ if result=$(check_mitmpkg); then
 						counter=$((counter+1))
       					else
 	   					log -p i -t eMagiskATVService "Process $MITMPKG is alive. No action required."
+     						counter=0
      					fi
 	  				continue
 				elif [[ $MITMPKG == com.gocheats.launcher ]]; then
@@ -561,13 +564,14 @@ if result=$(check_mitmpkg); then
 
 				calcTimeDiff=$(( $current_time - $timestamp_epoch ))
 				if [[ $calcTimeDiff -le 120 ]]; then
-					log -p i -t eMagiskATVService "The log was modified within the last 120 seconds. No action required."
-					led_red # turn red when service is up
+					      log -p i -t eMagiskATVService "The log was modified within the last 120 seconds. No action required."
+     			      counter=0
+					      led_red # turn red when service is up
 				else
-					log -p i -t eMagiskATVService "The log wasn't modified within the last 120 seconds. Forcing restart of MITM. ts: $timestamp_epoch, time now: $current_time"
-					led_blue # turn blue when service is down
-					force_restart
-					counter=$((counter+1))
+					      log -p i -t eMagiskATVService "The log wasn't modified within the last 120 seconds. Forcing restart of MITM. ts: $timestamp_epoch, time now: $current_time"
+					      force_restart
+					      counter=$((counter+1))
+					      led_blue # turn blue when service is down
 				fi
 			fi
 		done
