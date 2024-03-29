@@ -511,6 +511,7 @@ if result=$(check_mitmpkg); then
 						counter=$((counter+1))
       					else
 	   					log -p i -t eMagiskATVService "Process $MITMPKG is alive. No action required."
+     						counter=0
      					fi
 	  				continue
 				elif [[ $MITMPKG == com.gocheats.launcher ]]; then
@@ -526,6 +527,7 @@ if result=$(check_mitmpkg); then
 				calcTimeDiff=$(( $current_time - $timestamp_epoch ))
 				if [[ $calcTimeDiff -le 120 ]]; then
 					log -p i -t eMagiskATVService "The log was modified within the last 120 seconds. No action required."
+     					counter=0
 				else
 					log -p i -t eMagiskATVService "The log wasn't modified within the last 120 seconds. Forcing restart of MITM. ts: $timestamp_epoch, time now: $current_time"
 					force_restart
