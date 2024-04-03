@@ -1,9 +1,12 @@
 #!/system/bin/sh
 
-# Base stuff we need
+# Initial Variable
 POGOPKG=com.nianticlabs.pokemongo
 CONFIGFILE='/data/local/tmp/emagisk.config'
+
+# Set DNS Properties on the ATV
 setprop net.dns1 1.1.1.1 && setprop net.dns2 8.8.8.8
+
 # Check if $CONFIGFILE exists and has data. Pulls data and checks the RDM connection status.
 # Data stored as global variables using export
 get_config() {
@@ -18,9 +21,9 @@ get_config() {
 
 get_config
 
-# Check for the mitm pkg
-
-get_mitm_pkg() { # This function is so hardcoded that I'm allergic to it 
+# Check for the mitm PKG
+# This function is so hardcoded that I'm allergic to it
+get_mitm_pkg() {
 	busybox ps aux | grep -E -C0 "pokemod|gocheats|sy1vi3" | grep -C0 -v grep | awk -F ' ' '/com.pokemod/{print $NF} /com.sy1vi3/{print $NF} /com.gocheats.launcher/{print $NF}' | grep -E -C0 "gocheats|pokemod|sy1vi3" | sed -e 's/^[0-9]*://' -e 's@:.*@@g' | sort | uniq
 }
 
@@ -65,23 +68,23 @@ get_deviceName() {
 
 # This is for the X96 Mini and X96W Atvs. Can be adapted to other ATVs that have a led status indicator
 ### Stupidly added led management for H96Max devices. You should let it commented out if you don't run this device
-led_red(){
+led_red() {
 	if [ -e /sys/class/leds/led-sys ]; then
-		echo 0 > /sys/class/leds/led-sys/brightness
+		echo 0 >/sys/class/leds/led-sys/brightness
 	elif [ -e /sys/class/leds/sys_led ]; then
-		echo 0 > /sys/class/leds/sys_led/brightness
+		echo 0 >/sys/class/leds/sys_led/brightness
 	elif [ -e /sys/class/leds/power-red ]; then
-	    echo 1 > /sys/class/leds/power-red/brightness # H96MAX LED Management 
+		echo 1 >/sys/class/leds/power-red/brightness # H96MAX LED Management
 	fi
 }
 
-led_blue(){
+led_blue() {
 	if [ -e /sys/class/leds/led-sys ]; then
-		echo 1 > /sys/class/leds/led-sys/brightness
+		echo 1 >/sys/class/leds/led-sys/brightness
 	elif [ -e /sys/class/leds/sys_led ]; then
-		echo 1 > /sys/class/leds/sys_led/brightness
+		echo 1 >/sys/class/leds/sys_led/brightness
 	elif [ -e /sys/class/leds/power-red ]; then
-	    echo 0 > /sys/class/leds/power-red/brightness # H96MAX LED Management
+		echo 0 >/sys/class/leds/power-red/brightness # H96MAX LED Management
 	fi
 }
 
@@ -108,7 +111,7 @@ force_restart() {
 		if [ "$(echo $android_version | cut -d. -f1)" -ge 8 ]; then
 			monkey -p $MITMPKG 1 # To solve "Error: app is in background uid null"
 			sleep 3
-   			input keyevent KEYCODE_HOME
+			input keyevent KEYCODE_HOME
 		fi
 		if [[ $MITMPKG == com.pokemod.atlas* ]]; then
 			am startservice $MITMPKG/com.pokemod.atlas.services.MappingService
@@ -120,7 +123,7 @@ force_restart() {
 		sleep 5
 		am start -n $MITMPKG/.MainActivity
 	fi
-	log -p i -t eMagiskATVService "Services were restarted!"
+	log -p i -t eMagiskATVService "Mappin Services were restarted!"
 }
 
 # Adjust the script depending on MITM
@@ -128,7 +131,6 @@ force_restart() {
 check_mitmpkg
 
 # Send a webhook to discord if it's configured
-
 webhook() {
 	# Check if discord_webhook variable is set
 	if [[ -z "$discord_webhook" ]]; then
@@ -149,13 +151,13 @@ webhook() {
 	local mac_address_nodots="$(ip link show eth0 | awk '/ether/ {print $2}' | tr -d ':')"
 	local timestamp="$(date +%Y-%m-%d_%H-%M-%S)"
 	local mitm_version="NOT INSTALLED"
-	local pogo_version="$(dumpsys package com.nianticlabs.pokemongo | grep versionName |cut -d "=" -f 2)"
+	local pogo_version="$(dumpsys package com.nianticlabs.pokemongo | grep versionName | cut -d "=" -f 2)"
 	local agent=""
 	local playStoreVersion=""
 	local temperature="$(cat /sys/class/thermal/thermal_zone0/temp | awk '{print substr($0, 1, length($0)-3)}')"
-	playStoreVersion=$(dumpsys package com.android.vending | grep versionName |head -n 1|cut -d "=" -f 2)
+	playStoreVersion=$(dumpsys package com.android.vending | grep versionName | head -n 1 | cut -d "=" -f 2)
 	android_version=$(getprop ro.build.version.release)
-	
+
 	get_deviceName
 
 	# Get mitm version
@@ -169,64 +171,66 @@ webhook() {
 	mkdir "$temp_dir"
 
 	# Retrieve the logcat logs
-	logcat -v colors -d > "$temp_dir/logcat_${MITMPKG}_${timestamp}_${mac_address_nodots}_selfSentLog.log"
-	
+	logcat -v colors -d >"$temp_dir/logcat_${MITMPKG}_${timestamp}_${mac_address_nodots}_selfSentLog.log"
+
 	# Create the payload JSON
-	payload_json=$(jq -n \
-                  --arg username "$mitmDeviceName" \
-                  --arg content "$message" \
-                  --arg deviceName "$mitmDeviceName" \
-                  --arg localIp "$local_ip" \
-                  --arg wanIp "$wan_ip" \
-                  --arg mac "$mac_address" \
-                  --arg temp "$temperature" \
-                  --arg mitm "$MITMPKG" \
-                  --arg mitmVersion "$mitm_version" \
-                  --arg pogoVersion "$pogo_version" \
-                  --arg playStoreVersion "$playStoreVersion" \
-                  --arg androidVersion "$android_version" \
-                  '{
+	payload_json=$(
+		jq -n \
+			--arg username "$mitmDeviceName" \
+			--arg content "$message" \
+			--arg deviceName "$mitmDeviceName" \
+			--arg localIp "$local_ip" \
+			--arg wanIp "$wan_ip" \
+			--arg mac "$mac_address" \
+			--arg temp "$temperature" \
+			--arg mitm "$MITMPKG" \
+			--arg mitmVersion "$mitm_version" \
+			--arg pogoVersion "$pogo_version" \
+			--arg playStoreVersion "$playStoreVersion" \
+			--arg androidVersion "$android_version" \
+			'{
                     username: $username,
                     content: $content,
                     embeds: [
-                      {
+					{
                         title: $deviceName,
                         fields: [
-                          {name: "Local IP", value: $localIp, inline: true},
-                          {name: "WAN IP", value: $wanIp, inline: true},
-                          {name: "MAC", value: $mac, inline: true},
-                          {name: "Temperature", value: $temp, inline: true},
-                          {name: "MITM Package", value: $mitm, inline: true},
-                          {name: "MITM Version", value: $mitmVersion, inline: true},
-                          {name: "PoGo Version", value: $pogoVersion, inline: true},
-                          {name: "Play Store Version", value: $playStoreVersion, inline: true},
-                          {name: "Android Version", value: $androidVersion, inline: true}
-                        ]
-                      }
-                    ]
-                  }')
+							{name: "Local IP", value: $localIp, inline: true},
+							{name: "WAN IP", value: $wanIp, inline: true},
+							{name: "MAC", value: $mac, inline: true},
+							{name: "Temperature", value: $temp, inline: true},
+							{name: "MITM Package", value: $mitm, inline: true},
+							{name: "MITM Version", value: $mitmVersion, inline: true},
+							{name: "PoGo Version", value: $pogoVersion, inline: true},
+							{name: "Play Store Version", value: $playStoreVersion, inline: true},
+							{name: "Android Version", value: $androidVersion, inline: true}
+							]
+					}
+                ]
+		}'
+	)
 
 	log -p i -t eMagiskATVService "Sending discord webhook"
 	# Upload the payload JSON and logcat logs to Discord
-    if [[ $MITMPKG == com.pokemod.atlas* ]]; then
-        curl -X POST -k -H "Content-Type: multipart/form-data" \
-        -F "payload_json=$payload_json" \
-        -F "logcat=@$temp_dir/logcat_${MITMPKG}_${timestamp}_${mac_address_nodots}_selfSentLog.log" \
-        -F "atlaslog=@/data/local/tmp/atlas.log" \
-        "$discord_webhook"
-    # Check for com.pokemod.aegis* package and send webhook with aegis.log (or specific log for aegis)
-    elif [[ $MITMPKG == com.pokemod.aegis* ]]; then
+	if [[ $MITMPKG == com.pokemod.atlas* ]]; then
 		curl -X POST -k -H "Content-Type: multipart/form-data" \
-        -F "payload_json=$payload_json" \
-        -F "logcat=@$temp_dir/logcat_${MITMPKG}_${timestamp}_${mac_address_nodots}_selfSentLog.log" \
-        -F "aegislog=@/data/local/tmp/aegis.log" \
-        "$discord_webhook"
+			-F "payload_json=$payload_json" \
+			-F "logcat=@$temp_dir/logcat_${MITMPKG}_${timestamp}_${mac_address_nodots}_selfSentLog.log" \
+			-F "atlaslog=@/data/local/tmp/atlas.log" \
+			"$discord_webhook"
+	# Check for com.pokemod.aegis* package and send webhook with aegis.log (or specific log for aegis)
+	elif [[ $MITMPKG == com.pokemod.aegis* ]]; then
+		curl -X POST -k -H "Content-Type: multipart/form-data" \
+			-F "payload_json=$payload_json" \
+			-F "logcat=@$temp_dir/logcat_${MITMPKG}_${timestamp}_${mac_address_nodots}_selfSentLog.log" \
+			-F "aegislog=@/data/local/tmp/aegis.log" \
+			"$discord_webhook"
 	else
 		# curl -X POST -k -H "Content-Type: multipart/form-data" -F "payload_json=$payload_json" "$discord_webhook" -F "logcat=@$temp_dir/logcat_${MITMPKG}_${timestamp}_${mac_address_nodots}_selfSentLog.log"
 		curl -X POST -k -H "Content-Type: multipart/form-data" \
-        -F "payload_json=$payload_json" \
-        -F "logcat=@$temp_dir/logcat_${MITMPKG}_${timestamp}_${mac_address_nodots}_selfSentLog.log" \
-    	"$discord_webhook"
+			-F "payload_json=$payload_json" \
+			-F "logcat=@$temp_dir/logcat_${MITMPKG}_${timestamp}_${mac_address_nodots}_selfSentLog.log" \
+			"$discord_webhook"
 	fi
 	# Clean up temporary files
 	rm -rf "$temp_dir"
@@ -235,7 +239,7 @@ webhook() {
 autoupdate() {
 	# Autoupdate this script
 	# emagisk_version=$(grep -o 'versionCode=[0-9]*' /data/adb/modules/emagisk/module.prop -C0 | cut -d '=' -f 2)
-	autoupdate_url="https://raw.githubusercontent.com/Astu04/eMagisk/master/custom/ATVServices.sh"
+	autoupdate_url="$autoupdateurl"
 	script_path="/data/adb/modules/emagisk/ATVServices.sh"
 	cd /data/local/tmp/
 
@@ -245,45 +249,45 @@ autoupdate() {
 
 	# Check if the HTTP status is 200 (OK)
 	if [[ $http_status -eq 200 ]]; then
-	  # Check if the first line of the updated script is #!/system/bin/sh
-	  first_line=$(head -n 1 updated_script.sh)
-	  last_line=$(tail -n 2 updated_script.sh|grep "ENDOFFILE")
+		# Check if the first line of the updated script is #!/system/bin/sh
+		first_line=$(head -n 1 updated_script.sh)
+		last_line=$(tail -n 2 updated_script.sh | grep "ENDOFFILE")
 
-	  if [[ $first_line = '#!/system/bin/sh' ]] && [[ $last_line = '#ENDOFFILE' ]]; then
-		# Compare the content of the downloaded script with the existing script
-		if ! cmp -s updated_script.sh "$script_path"; then
-		  # Replace the script with the updated version
-		  chmod +x updated_script.sh
-		  mv updated_script.sh "$script_path"
-		  
-		  log -p i -t eMagiskATVService "[AUTOUPDATE] ATVServices.sh was auto updated"
-		  webhook "[AUTOUPDATE] ATVServices.sh was auto updated"
+		if [[ $first_line = '#!/system/bin/sh' ]] && [[ $last_line = '#ENDOFFILE' ]]; then
+			# Compare the content of the downloaded script with the existing script
+			if ! cmp -s updated_script.sh "$script_path"; then
+				# Replace the script with the updated version
+				chmod +x updated_script.sh
+				mv updated_script.sh "$script_path"
 
-		  # Run the updated script as a daemon
-		  nohup "$script_path" >/dev/null 2>&1 &
+				log -p i -t eMagiskATVService "[AUTOUPDATE] ATVServices.sh was auto updated"
+				webhook "[AUTOUPDATE] ATVServices.sh was auto updated"
 
-		  # Kill the parent process
-		  pkill -f "$0"
+				# Run the updated script as a daemon
+				nohup "$script_path" >/dev/null 2>&1 &
+
+				# Kill the parent process
+				pkill -f "$0"
+			else
+				log -p i -t eMagiskATVService "[AUTOUPDATE] The downloaded script is identical to the existing script."
+				rm -f updated_script.sh
+			fi
 		else
-		  log -p i -t eMagiskATVService  "[AUTOUPDATE] The downloaded script is identical to the existing script."
-		  rm -f updated_script.sh
+			log -p i -t eMagiskATVService "[AUTOUPDATE] The downloaded script does not have the expected shebang."
+			log -p i -t eMagiskATVService "[AUTOUPDATE] It had: $first_line"
+			webhook "[AUTOUPDATE] The downloaded script does not have the expected shebang."
 		fi
-	  else
-		log -p i -t eMagiskATVService  "[AUTOUPDATE] The downloaded script does not have the expected shebang."
-		log -p i -t eMagiskATVService  "[AUTOUPDATE] It had: $first_line"
-		webhook "[AUTOUPDATE] The downloaded script does not have the expected shebang."
-	  fi
 	else
-	  log -p i -t eMagiskATVService  "[AUTOUPDATE] Failed to download the updated script. HTTP status code: $http_status"
-	  webhook "[AUTOUPDATE] Failed to download the updated script. HTTP status code: $http_status"
+		log -p i -t eMagiskATVService "[AUTOUPDATE] Failed to download the updated script. HTTP status code: $http_status"
+		webhook "[AUTOUPDATE] Failed to download the updated script. HTTP status code: $http_status"
 	fi
 }
 
 # Disable playstore alltogether (no auto updates)
 
 # if [ "$(pm list packages -e com.android.vending)" = "package:com.android.vending" ]; then
-	# log -p i -t eMagiskATVService "Disabling Play Store"
-	# pm disable-user com.android.vending
+# log -p i -t eMagiskATVService "Disabling Play Store"
+# pm disable-user com.android.vending
 # fi
 
 # Check if the magiskhide binary exists
@@ -329,10 +333,10 @@ else
 				! sqlite3 /data/adb/magisk.db "INSERT INTO policies (uid, policy, until, logging, notification) VALUES ($packageUID, 2, 0, 1, 1)"; then
 				log -p i -t eMagiskATVService "ERROR: Could not add $package (UID: $packageUID) to Magisk's DB."
 			fi
-   		else
+		else
 			log -p i -t eMagiskATVService "Root permissions for $package are OK!"
-	  	fi
-    	done
+		fi
+	done
 fi
 
 # Set mitm mock location permission as ignore
@@ -405,10 +409,31 @@ fi
 
 # Check if ADB over Wi-Fi is disabled (adb_wifi_enabled is set to 0)
 
-adb_wifi_status=$(settings get global adb_wifi_enabled)
-if [ "$adb_wifi_status" -eq 0 ]; then
-    log -p i -t eMagiskATVService "ADB over Wi-Fi is currently disabled. Enabling it..."
+# Function to enable ADB over Wi-Fi
+enable_adb_over_wifi() {
+    log -p i -t eMagiskATVService "Enabling ADB over Wi-Fi..."
     settings put global adb_wifi_enabled 1
+}
+
+# Function to disable ADB over Wi-Fi
+disable_adb_over_wifi() {
+    log -p i -t eMagiskATVService "Disabling ADB over Wi-Fi..."
+    settings put global adb_wifi_enabled 0
+}
+
+# Check if ADB over Wi-Fi is enabled
+if [ "$enable_adb_over_wifi" = "true" ]; then
+    if [ "$adb_wifi_status" -eq 0 ]; then
+        enable_adb_over_wifi
+    else
+        log -p i -t eMagiskATVService "ADB over Wi-Fi is already enabled."
+    fi
+else
+    if [ "$adb_wifi_status" -eq 1 ]; then
+        disable_adb_over_wifi
+    else
+        log -p i -t eMagiskATVService "ADB over Wi-Fi is already disabled."
+    fi
 fi
 
 # Check and set permissions for adb_keys
@@ -417,12 +442,12 @@ adb_keys_file="/data/misc/adb/adb_keys"
 if [ -e "$adb_keys_file" ]; then
 	current_permissions=$(stat -c %a "$adb_keys_file")
 	if [ "$current_permissions" -ne 640 ]; then
-		log -p i -t eMagiskATVService  "Changing permissions for $adb_keys_file to 640..."
+		log -p i -t eMagiskATVService "Changing permissions for $adb_keys_file to 640..."
 		chmod 640 "$adb_keys_file"
 	fi
 fi
 
-# Download cacert to use certs instead of curl -k 
+# Download cacert to use certs instead of curl -k
 
 cacert_path="/data/local/tmp/cacert.pem"
 if [ ! -f "$cacert_path" ]; then
@@ -430,51 +455,52 @@ if [ ! -f "$cacert_path" ]; then
 	curl -k -o "$cacert_path" https://curl.se/ca/cacert.pem
 fi
 
-
 # Health Service
 
 if result=$(check_mitmpkg); then
 	(
 		log -p i -t eMagiskATVService "eMagisk: Astu's fork. Starting health check service in 4 minutes... MITM: $MITMPKG"
+
 		counter=0
 		rdmDeviceID=1
+
 		log -p i -t eMagiskATVService "Start counter at $counter"
 		# get_config
 		# Check for updates
 		if [ "$autoupdate" = "true" ]; then
-		  log -p i -t eMagiskATVService "[AUTOUPDATE] Checking for new updates"
-		  autoupdate
+			log -p i -t eMagiskATVService "[AUTOUPDATE] Checking for new updates"
+			autoupdate
 		else
-		  log -p i -t eMagiskATVService "[AUTOUPDATE] Disabled. Skipping"
+			log -p i -t eMagiskATVService "[AUTOUPDATE] Disabled. Skipping"
 		fi
 		webhook "Booting"
-		while :; do  
+		while :; do
 			sleep_duration=120
-		        if [[ "$MITMPKG" == com.pokemod.atlas* ]]; then
-			    sleep_duration=240
-		        fi
-			sleep $((sleep_duration+$RANDOM%10))
+			if [[ "$MITMPKG" == com.pokemod.atlas* ]]; then
+				sleep_duration=240
+			fi
+			sleep $((sleep_duration + $RANDOM % 10))
 
-			# Check MITM config for device name based on the installed MITM 
+			# Check MITM config for device name based on the installed MITM
 			get_deviceName
 
 			if [[ "$MITMPKG" == com.pokemod.atlas* ]]; then
-				if [[ $(tail -n 1 /data/local/tmp/atlas.log | grep -q "Could not send heartbeat")  ]]; then
-    				force_restart
+				if [[ $(tail -n 1 /data/local/tmp/atlas.log | grep -q "Could not send heartbeat") ]]; then
+					force_restart
 				fi
 			fi
 
-			if [[ $counter -gt 3 ]];then
+			if [[ $counter -gt 3 ]]; then
 				log -p i -t eMagiskATVService "Critical restart threshold of $counter reached. Rebooting device..."
 				webhook "Critical restart threshold of $counter reached. Rebooting device..."
 				reboot
 				# We need to wait for the reboot to actually happen or the process might be interrupted
-				sleep 60 
+				sleep 60
 			fi
 
 			# Check if com.nianticlabs.pokemongo is running
 			BUSYBOX_PS_OUTPUT=$(busybox ps | grep -E "com\.nianticlabs\.pokemongo")
-			
+
 			# Check if the process is running and adjust I/O priority if found
 			if [ -n "$BUSYBOX_PS_OUTPUT" ]; then
 				log -p i -t eMagiskATVService "com.nianticlabs.pokemongo is running. Adjusting I/O priority..."
@@ -483,45 +509,64 @@ if result=$(check_mitmpkg); then
 				for i in $pids; do /data/adb/magisk/busybox chrt -r -p 99 $i & done
 			fi
 
-			if [ -n "$rdm_user" ] && [ -n "$rdm_password" ] && [ -n "$rdm_backendURL" ]; then # In case rdm variables are confiugred
-				log -p i -t eMagiskATVService "Started rdm health check!"
-				response=$(curl -s -w "%{http_code}" --cacert "$cacert_path" -u "$rdm_user":"$rdm_password" "$rdm_backendURL/api/get_data?show_devices=true&formatted=false")
-				statusCode=$(echo "$response" | tail -c 4)
+			if [ "$mappingmethode" = "rotom" ]; then
+				# Health check based on jinnatar's mitm_nanny logic
+				log -p i -t eMagiskATVService "Starting Rotom health check"
+
+				rotom="\$(jq -r '.rotomUrl' /data/local/tmp/aegis_config.json)"
+
+				# If active connections to Rotom are less than 1 restart MITM
+				activeConnections=$(ss -pnt | grep pokemongo | grep "\${rotom}" | wc -l)
+				if [[ $activeConnections -lt "1" ]]; then
+					log -p i -t eMagiskATVService "Found less than 1 connection to Rotom, restarting..."
+						force_restart
+						counter=$((counter+1))
+				else
+					log -p i -t eMagiskATVService "Active connections to Rotom found, all good in the hood(maybe)"
+					counter=0
+				fi
+				done
+				log -p i -t eMagiskATVService "Scheduling next check in 4 minutes..."
 				
+			elif [ "$mappingmethode" = "rdm" ]; then
+				if [ -n "$user" ] && [ -n "$password" ] && [ -n "$backendURL" ]; then # In case rdm variables are confiugred
+				log -p i -t eMagiskATVService "Started rdm health check!"
+				response=$(curl -s -w "%{http_code}" --cacert "$cacert_path" -u "$user":"$password" "$backendURL/api/get_data?show_devices=true&formatted=false")
+				statusCode=$(echo "$response" | tail -c 4)
+
 				if [ "$statusCode" -ne 200 ]; then
 					case "$statusCode" in
-						401)
-							message="Unauthorized. Check your credentials."
-							;;
-						404)
-							message="Resource not found."
-							;;
-						500)
-							message="Internal Server Error. Check the server logs."
-							;;
-						*)
-							message="Something went wrong with the request. Status code: $statusCode."
-							;;
+					401)
+						message="Unauthorized. Check your credentials."
+						;;
+					404)
+						message="Resource not found."
+						;;
+					500)
+						message="Internal Server Error. Check the server logs."
+						;;
+					*)
+						message="Something went wrong with the request. Status code: $statusCode."
+						;;
 					esac
 
 					log -p i -t eMagiskATVService "RDM statusCode error: $message"
 					continue
 				fi
-				
+
 				rdmInfo=$(echo "$response" | sed '$s/...$//')
 				rdmTimestamp=$(echo "$rdmInfo" | jq -r '.data.timestamp')
 				lastSeens=$(echo "$rdmInfo" | jq -r '.data.devices[] | select(.uuid | startswith("'"$mitmDeviceName"'")) | .last_seen')
 
-				for lastSeen in $lastSeens
-				do
+				for lastSeen in $lastSeens; do
 					log -p i -t eMagiskATVService "Found our device! Checking for timestamps..."
-					calcTimeDiff=$(( $rdmTimestamp - $lastSeen ))
+					calcTimeDiff=$(($rdmTimestamp - $lastSeen))
 
 					if [[ $calcTimeDiff -gt 300 ]]; then
 						log -p i -t eMagiskATVService "Last seen at RDM is greater than 5 minutes -> MITM Service will be restarting..."
 						force_restart
 						led_blue
-						counter=$((counter+1))
+						counter=$((counter + 1))
 						log -p i -t eMagiskATVService "Counter is now set at $counter. device will be rebooted if counter reaches 4 failed restarts."
 						webhook "Counter is now set at $counter. device will be rebooted if counter reaches 4 failed restarts."
 						continue 2
@@ -536,7 +581,7 @@ if result=$(check_mitmpkg); then
 					fi
 				done
 				log -p i -t eMagiskATVService "Scheduling next check in 4 minutes..."
-			else # As rdm variables aren't configured, we'll check the logs last timestamp
+			else
 				log -p i -t eMagiskATVService "Started health check!"
 				if [[ $MITMPKG == com.pokemod.atlas* ]]; then
 					log_path="/data/local/tmp/atlas.log"
@@ -546,32 +591,33 @@ if result=$(check_mitmpkg); then
 					if ! ps -a | grep -v grep | grep "$MITMPKG"; then
 						log -p i -t eMagiskATVService "Process $MITMPKG is not alive, starting it"
 						am start -n $MITMPKG/.MainActivity
-						counter=$((counter+1))
-      					else
-	   					log -p i -t eMagiskATVService "Process $MITMPKG is alive. No action required."
-     						counter=0
-     					fi
-	  				continue
+						counter=$((counter + 1))
+					else
+						log -p i -t eMagiskATVService "Process $MITMPKG is alive. No action required."
+						counter=0
+					fi
+					continue
 				elif [[ $MITMPKG == com.gocheats.launcher ]]; then
 					log_path=$(ls -lt /data/data/com.nianticlabs.pokemongo/cache/Exegg* | grep -E "^-" | head -n 1 | awk '{print $NF}')
 				else
 					log -p i -t eMagiskATVService "No MITM detected ($MITMPKG?), skipping health check."
 					continue
 				fi
+
 				# Store the timestamp of the log file into another variable using stat
 				timestamp_epoch=$(stat -c "%Y" "$log_path")
 				current_time=$(date +%s)
 
-				calcTimeDiff=$(( $current_time - $timestamp_epoch ))
+				calcTimeDiff=$(($current_time - $timestamp_epoch))
 				if [[ $calcTimeDiff -le 120 ]]; then
-					      log -p i -t eMagiskATVService "The log was modified within the last 120 seconds. No action required."
-     			      counter=0
-					      led_red # turn red when service is up
+					log -p i -t eMagiskATVService "The log was modified within the last 120 seconds. No action required."
+					counter=0
+					led_red # turn red when service is up
 				else
-					      log -p i -t eMagiskATVService "The log wasn't modified within the last 120 seconds. Forcing restart of MITM. ts: $timestamp_epoch, time now: $current_time"
-					      force_restart
-					      counter=$((counter+1))
-					      led_blue # turn blue when service is down
+					log -p i -t eMagiskATVService "The log wasn't modified within the last 120 seconds. Forcing restart of MITM. ts: $timestamp_epoch, time now: $current_time"
+					force_restart
+					counter=$((counter + 1))
+					led_blue # turn blue when service is down
 				fi
 			fi
 		done
