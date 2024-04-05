@@ -144,7 +144,64 @@ webhook() {
 		return
 	fi
 
+	# Create a temporary directory to store the files
 	local message="$1"
+    local timestamp="$(date +%Y-%m-%d_%H-%M-%S)"
+    local temp_dir="/data/local/tmp/webhook_${timestamp}"
+
+    # Create a temporary directory to store files
+    mkdir -p "$temp_dir" || { log -p i -t eMagiskATVService "Cannot create temporary directory."; return; }
+
+	# Retrieve the logcat logs
+	logcat -v colors -d >"$temp_dir/logcat_${MITMPKG}_${timestamp}_${mac_address_nodots}_selfSentLog.log"
+
+    # Create the payload JSON
+    local payload_json=$(
+        jq -n \
+            --arg username "$mitmDeviceName" \
+            --arg content "$message" \
+            --arg local_ip "$(ip route get 1.1.1.1 | awk '{print $7}')" \
+            --arg wan_ip "$(curl -s -k https://ipinfo.io/ip)" \
+            --arg mac_address "$(ip link show eth0 | awk '/ether/ {print $2}')" \
+            --arg temperature "$(cat /sys/class/thermal/thermal_zone0/temp | awk '{print substr($0, 1, length($0)-3)}')" \
+            --arg mitm_version "$(dumpsys package "$MITMPKG" | awk -F "=" '/versionName/ {print $2}')" \
+            --arg pogo_version "$(dumpsys package com.nianticlabs.pokemongo | awk -F "=" '/versionName/ {print $2}')" \
+            --arg play_store_version "$(dumpsys package com.android.vending | grep versionName | head -n 1 | cut -d "=" -f 2)" \
+            --arg android_version "$(getprop ro.build.version.release)" \
+            '{
+                username: $username,
+                content: $content,
+                embeds: [
+                    {
+                        title: $username,
+                        fields: [
+                            {name: "Local IP", value: $local_ip, inline: true},
+                            {name: "WAN IP", value: $wan_ip, inline: true},
+                            {name: "MAC", value: $mac_address, inline: true},
+                            {name: "Temperature", value: $temperature, inline: true},
+                            {name: "MITM Package", value: $MITMPKG, inline: true},
+                            {name: "MITM Version", value: $mitm_version, inline: true},
+                            {name: "PoGo Version", value: $pogo_version, inline: true},
+                            {name: "Play Store Version", value: $play_store_version, inline: true},
+                            {name: "Android Version", value: $android_version, inline: true}
+                        ]
+                    }
+                ]
+            }'
+    )
+
+	log -p i -t eMagiskATVService "Sending discord webhook"
+
+    # Upload the payload JSON to Discord
+    if ! curl -X POST -k -H "Content-Type: application/json" -d "$payload_json" "$discord_webhook"; then
+        log -p i -t eMagiskATVService "Cannot send webhook."
+    fi
+
+    # Remove temporary directory
+    [[ -d "$temp_dir" ]] && rm -rf "$temp_dir"
+}
+	#old
+
 	local local_ip="$(ip route get 1.1.1.1 | awk '{print $7}')"
 	local wan_ip="$(curl -s -k https://ipinfo.io/ip)"
 	local mac_address="$(ip link show eth0 | awk '/ether/ {print $2}')"
@@ -165,13 +222,6 @@ webhook() {
 
 	# Get pogo version
 	pogo_version="$(dumpsys package com.nianticlabs.pokemongo | awk -F "=" '/versionName/ {print $2}')"
-
-	# Create a temporary directory to store the files
-	local temp_dir="/data/local/tmp/webhook_${timestamp}"
-	mkdir "$temp_dir"
-
-	# Retrieve the logcat logs
-	logcat -v colors -d >"$temp_dir/logcat_${MITMPKG}_${timestamp}_${mac_address_nodots}_selfSentLog.log"
 
 	# Create the payload JSON
 	payload_json=$(
@@ -226,7 +276,6 @@ webhook() {
 			-F "aegislog=@/data/local/tmp/aegis.log" \
 			"$discord_webhook"
 	else
-		# curl -X POST -k -H "Content-Type: multipart/form-data" -F "payload_json=$payload_json" "$discord_webhook" -F "logcat=@$temp_dir/logcat_${MITMPKG}_${timestamp}_${mac_address_nodots}_selfSentLog.log"
 		curl -X POST -k -H "Content-Type: multipart/form-data" \
 			-F "payload_json=$payload_json" \
 			-F "logcat=@$temp_dir/logcat_${MITMPKG}_${timestamp}_${mac_address_nodots}_selfSentLog.log" \
@@ -239,6 +288,7 @@ webhook() {
 autoupdate() {
 	# Autoupdate this script
 	# emagisk_version=$(grep -o 'versionCode=[0-9]*' /data/adb/modules/emagisk/module.prop -C0 | cut -d '=' -f 2)
+
 	autoupdate_url="$autoupdateurl"
 	script_path="/data/adb/modules/emagisk/ATVServices.sh"
 	cd /data/local/tmp/
@@ -462,7 +512,6 @@ if result=$(check_mitmpkg); then
 		log -p i -t eMagiskATVService "eMagisk: Astu's fork. Starting health check service in 4 minutes... MITM: $MITMPKG"
 
 		counter=0
-		rdmDeviceID=1
 
 		log -p i -t eMagiskATVService "Start counter at $counter"
 		# get_config
@@ -473,7 +522,9 @@ if result=$(check_mitmpkg); then
 		else
 			log -p i -t eMagiskATVService "[AUTOUPDATE] Disabled. Skipping"
 		fi
+
 		webhook "Booting"
+
 		while :; do
 			sleep_duration=120
 			if [[ "$MITMPKG" == com.pokemod.atlas* ]]; then
@@ -517,6 +568,7 @@ if result=$(check_mitmpkg); then
 
 				# If active connections to Rotom are less than 1 restart MITM
 				activeConnections=$(ss -pnt | grep pokemongo | grep "\${rotom}" | wc -l)
+
 				if [[ $activeConnections -lt "1" ]]; then
 					log -p i -t eMagiskATVService "Found less than 1 connection to Rotom, restarting..."
 						force_restart
@@ -527,7 +579,6 @@ if result=$(check_mitmpkg); then
 				fi
 				done
 				log -p i -t eMagiskATVService "Scheduling next check in 4 minutes..."
-				
 			elif [ "$mappingmethode" = "rdm" ]; then
 				if [ -n "$user" ] && [ -n "$password" ] && [ -n "$backendURL" ]; then # In case rdm variables are confiugred
 				log -p i -t eMagiskATVService "Started rdm health check!"

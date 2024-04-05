@@ -8,9 +8,9 @@
 : ${SHELL:=$MKSH} ${USER=$(getprop ro.product.device)}
 
 if [ -d "/sbin/.magisk/busybox" ]; then
-  BBDIR="/sbin/.magisk/busybox"
+    BBDIR="/sbin/.magisk/busybox"
 elif [ -d "/sbin/.core/busybox" ]; then
-  BBDIR="/sbin/.core/busybox"
+    BBDIR="/sbin/.core/busybox"
 fi
 
 PATH=$BBDIR:$PATH
@@ -21,11 +21,11 @@ directories=("/sbin" "/system/sbin" "/odm/bin" "/vendor/bin" "/vendor/xbin" "/da
 
 # Loop through each directory and check/add to PATH
 for dir in "${directories[@]}"; do
-  # Check if the directory is not in the current $PATH
-  if [[ ":$PATH:" != *":$dir:"* ]]; then
-    # If not present, add it to the $PATH
-    export PATH="$PATH:$dir"
-  fi
+    # Check if the directory is not in the current $PATH
+    if [[ ":$PATH:" != *":$dir:"* ]]; then
+        # If not present, add it to the $PATH
+        export PATH="$PATH:$dir"
+    fi
 done
 
 androidVersion=$(getprop ro.build.version.release)
@@ -47,18 +47,14 @@ MITMPKG=$(get_mitm_pkg)
 mitmDeviceName="NONAME"
 # Check if $MITMPKG contains "aegis"
 if echo "$MITMPKG" | grep -q "aegis"; then
-    mitmDeviceName=$(cat /data/local/tmp/atlas_config.json | awk -F\" '{print $12}')
+    mitmDeviceName=$(cat /data/local/tmp/aegis_config.json | awk -F\" '{print $12}')
 # Check if $MITMPKG contains "atlas"
 elif echo "$MITMPKG" | grep -q "atlas"; then
     mitmDeviceName=$(cat /data/local/tmp/atlas_config.json | awk -F\" '{print $12}')
 elif [ "$MITMPKG" = "com.gocheats.launcher" ]; then
     mitmDeviceName=$(cat /data/local/tmp/config.json | awk -F\" '/device_name/ {print $4}')
 else
-    if [ -e "/data/local/tmp/atlas_config.json" ]; then
-        mitmDeviceName=$(cat /data/local/tmp/atlas_config.json | awk -F\" '{print $12}')
-    else
-        echo "MITMPKG is NOT RUNNING, and /data/local/tmp/atlas_config.json does not exist."
-    fi
+    echo "MITMPKG is NOT RUNNING, and a config.json does not exist."
 fi
 
 if (( USER_ID )); then PS1='$'; else PS1='#'; fi
@@ -92,10 +88,13 @@ fi
 
 # Check if $no_license is not zero
 if [ "$no_license" -ne 0 ]; then
-  echo "WARNING: This device has no license"
-  echo "   / \\"
-  echo "  / ! \\"
-  echo " /_____\\"
+    RED='\033[0;31m' # ANSI color code for red
+    NC='\033[0m'     # ANSI color code to reset color
+
+    echo -e "${RED}WARNING: This device has no license${NC}"
+    echo -e "${RED}   / \\${NC}"
+    echo -e "${RED}  / ! \\${NC}"
+    echo -e "${RED} /_____\\${NC}"
 fi
 
 cd /data/local/tmp/
@@ -103,20 +102,32 @@ cd /data/local/tmp/
 mitm_stop() {
         am force-stop $POGOPKG
         killall $POGOPKG
+        
+        # Determine which service to stop based on the value of $MITMPKG
         if [ $MITMPKG = "com.gocheats.launcher" ]; then
                 am force-stop $MITMPKG
-        else
+        elif [ $MITMPKG = "com.pokemod.aegis" ]; then
+                am stopservice $MITMPKG/com.pokemod.aegis.services.MappingService
+        elif [ $MITMPKG = "com.pokemod.atlas" ]; then
                 am stopservice $MITMPKG/com.pokemod.atlas.services.MappingService
-                am force-stop $MITMPKG
+        else
+                echo "Failed to detect MITMPKG kind"
         fi
 }
 
 mitm_start() {
+        am force-stop $POGOPKG
         killall $POGOPKG
-        if [ $MITMPKG = "package:com.gocheats.launcher" ]; then
+        
+        # Determine which service to start based on the value of $MITMPKG
+        if [ $MITMPKG = "com.gocheats.launcher" ]; then
                 monkey -p $MITMPKG 1
-        else
+        elif [ $MITMPKG = "com.pokemod.aegis" ]; then
+                am startservice $MITMPKG/com.pokemod.aegis.services.MappingService
+        elif [ $MITMPKG = "com.pokemod.atlas" ]; then
                 am startservice $MITMPKG/com.pokemod.atlas.services.MappingService
+        else
+                echo "Failed to detect MITMPKG kind"
         fi
 }
 
