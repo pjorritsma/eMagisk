@@ -4,7 +4,7 @@
 #-
 # Minimal /system/etc/mkshrc for Android
 
-: ${TERM:=xterm-256color} ${HOME=<SDCARD>} ${MKSH:=<BIN>/bash} ${HOSTNAME:=android}
+: ${TERM:=xterm-256color} ${HOME:=$SDCARD} ${MKSH:=<BIN>/bash} ${HOSTNAME:=android}
 : ${SHELL:=$MKSH} ${USER=$(getprop ro.product.device)}
 
 if [ -d "/sbin/.magisk/busybox" ]; then
@@ -29,6 +29,9 @@ for dir in "${directories[@]}"; do
 done
 
 androidVersion=$(getprop ro.build.version.release)
+mitm_version="NOT INSTALLED"
+pogo_version="NOT INSTALLED"
+temperature="$(echo $(($(cat /sys/class/thermal/thermal_zone0/temp) / 1000)))"
 
 get_mitm_pkg() {
     local mitm_pkg
@@ -39,11 +42,9 @@ get_mitm_pkg() {
         echo "$mitm_pkg"
     fi
 }
-
 MITMPKG=$(get_mitm_pkg)
 
 mitmDeviceName="NONAME"
-
 # Check if $MITMPKG contains "aegis"
 if echo "$MITMPKG" | grep -q "aegis"; then
     mitmDeviceName=$(cat /data/local/tmp/aegis_config.json | awk -F\" '{print $12}')
@@ -90,17 +91,46 @@ fi
 
 # Check if $no_license is not zero
 if [ "$no_license" -ne 0 ]; then
-    RED='\033[0;31m' # ANSI color code for red
-    NC='\033[0m'     # ANSI color code to reset color
+  RED='\033[0;31m' # ANSI color code for red
+  NC='\033[0m'     # ANSI color code to reset color
 
-    echo -e "${RED}WARNING: This device has no license${NC}"
-    echo -e "${RED}   / \\${NC}"
-    echo -e "${RED}  / ! \\${NC}"
-    echo -e "${RED} /_____\\${NC}"
+  echo -e "${RED}WARNING: This device has no license${NC}"
+  echo -e "${RED}   / \\${NC}"
+  echo -e "${RED}  / ! \\${NC}"
+  echo -e "${RED} /_____\\${NC}"
 fi
 
 cd /data/local/tmp/
 
-#remove mitm start function we do this in ATVServices.sh
+mitm_stop() {
+        am force-stop $POGOPKG
+        killall $POGOPKG
+        if [ $MITMPKG = "com.gocheats.launcher" ]; then
+                am force-stop $MITMPKG
+        elif [ $MITMPKG = "com.pokemod.aegis" ]; then
+                am stopservice $MITMPKG/com.pokemod.aegis.services.MappingService
+                am force-stop $MITMPKG
+        else
+                am stopservice $MITMPKG/com.pokemod.atlas.services.MappingService
+                am force-stop $MITMPKG
+        fi
+}
+
+mitm_start() {
+        killall $POGOPKG
+        if [ $MITMPKG = "package:com.gocheats.launcher" ]; then
+                monkey -p $MITMPKG 1
+        elif [ $MITMPKG = "com.pokemod.aegis" ]; then
+                am startservice $MITMPKG/com.pokemod.aegis.services.MappingService
+        else
+                am startservice $MITMPKG/com.pokemod.atlas.services.MappingService
+        fi
+}
+
+mitm_restart() {
+    mitm_stop
+    sleep 5
+    mitm_start
+}
 
 exec env HOME=<SDCARD> <BIN>/bash --rcfile <SDCARD>/.bashrc

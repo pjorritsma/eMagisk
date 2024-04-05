@@ -111,7 +111,7 @@ force_restart() {
 		if [ "$(echo $android_version | cut -d. -f1)" -ge 8 ]; then
 			monkey -p $MITMPKG 1 # To solve "Error: app is in background uid null"
 			sleep 3
-			input keyevent KEYCODE_HOME
+   			input keyevent KEYCODE_HOME
 		fi
 		if [[ $MITMPKG == com.pokemod.atlas* ]]; then
 			am startservice $MITMPKG/com.pokemod.atlas.services.MappingService

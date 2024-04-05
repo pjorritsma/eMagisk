@@ -155,18 +155,17 @@ print_modname() {
     ui_print "|                      by The Pokemod Group           |"
     ui_print "|                                                     |"
     ui_print "|                                                     |"
+    ui_print "|                                                     |"
     ui_print " _____________________________________________________"
     ui_print "|                                                     |"
     ui_print "|       Utility binaries, bash, pre-configs           |"
     ui_print "|      and services for Atlas ATVs... all in one.     |"
-    ui_print "|                $version                             |"
+    ui_print "|                $version                               |"
     ui_print "|                                                     |"
-    ui_print "|                Editors: Astu, PJ0tter               |"
-    ui_print "|                $version                             |"
     ui_print "|                                                     |"
     ui_print "|        by emi (@emi#0001) - emi@pokemod.dev         |"
     ui_print "|         Pokemod.dev  | Discord.gg/Pokemod           |"
-    ui_print "|_____________________________________________________|"
+    ui_print "|_____________________________________________________| "
     ui_print " "
 }
 
@@ -223,9 +222,9 @@ on_install() {
     ui_print "   Press VOLUME UP to SKIP INSTALLATION."
     ui_print "   Press VOLUME DOWN to INSTALL ATV Services."
     ui_print " "
-    ui_print "   After 3 seconds services will be installed!"
+    ui_print "   After 10 seconds services will be installed!"
     ui_print " "
-    timeout 3 /system/bin/getevent -lc 1 2>&1 | /system/bin/grep VOLUME >$TMPDIR/events
+    timeout 10 /system/bin/getevent -lc 1 2>&1 | /system/bin/grep VOLUME >$TMPDIR/events
 
     ui_print " "
 
